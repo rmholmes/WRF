@@ -26,8 +26,8 @@ CONTAINS
      &          ,psim,p_phy,q10,q2,qfx,qsfc,qshltr,qz0                &
 #endif
      &          ,raincv,rho,sfcevp,sfcexc,sfcrunoff ,acrunoff         &
-     &          ,smois,smstav,smstot,snoalb,snow,snowc,snowh,stepbl   &
-     &          ,smcrel                                               &
+     &          ,smois,smstav,smstot,snoalb,snow,snowc,snowh,esnow    &
+     &          ,stepbl,smcrel                                        &
      &          ,th10,th2,thz0,th_phy,tmn,tshltr,tsk,tslb             &
      &          ,tyr,tyra,tdly,tlag,lagday,nyear,nday,tmn_update,yr   &
      &          ,t_phy,u10,udrunoff,ust,uz0                           &
@@ -462,6 +462,7 @@ CONTAINS
 !-- CAPG          heat capacity for soil (J/K/m^3)
 !-- THC           thermal inertia (Cal/cm/K/s^0.5)
 !-- SNOWC         flag indicating snow coverage (1 for snow cover)
+!-- ESNOW         sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- HFX           net upward heat flux at the surface (W/m^2)
 !-- QFX           net upward moisture flux at the surface (kg/m^2/s)
 !-- TAUX          RHO*U**2 for ocean coupling
@@ -700,6 +701,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SNOW
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SNOWC
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SNOWH
+   REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   ESNOW
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   TH2
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   THZ0
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   TSK
@@ -1586,6 +1588,7 @@ CONTAINS
             SNOW(I,J)  = 0.
             SNOWC(I,J) = 0.
             SNOWH(I,J) = 0.
+            ESNOW(I,J) = 0.
             TMN(I,J) = SST(I,J)
             ALBEDO(I,J) = 0.08
             ALBBCK(I,J) = 0.08
@@ -2563,7 +2566,7 @@ CONTAINS
                 snowc,qsfc,rainbl,                              &
                 mminlu,                                         &
                 num_soil_layers,dtbl,dzs,itimestep,             &
-                smois,tslb,snow,canwat,                         &
+                smois,tslb,snow,esnow,canwat,                   &
                 chs, chs2, cqs2, cpm,rcp,SR,chklowq,lai,qz0,    &
                 myj,frpcpn,                                     &
 		sh2o,snowh,                                     & !h
@@ -2698,7 +2701,7 @@ CONTAINS
                 snowc,qsfc,rainbl,                              &
                 mminlu,                                         &
                 num_soil_layers,dtbl,dzs,itimestep,             &
-                smois,tslb,snow,canwat,                         &
+                smois,tslb,snow,esnow,canwat,                   &
                 chs, chs2, cqs2, cpm,rcp,SR,chklowq,lai,qz0,    &
                 myj,frpcpn,                                     &
 		sh2o,snowh,                                     & !h
@@ -2783,7 +2786,7 @@ CONTAINS
               &            t_phy, qv_curr, p8w, dz8w, num_soil_layers, dt, frpcpn, sr, &
               &            glw, swdown, rainbl, snoalb, qgh, xice, xice_threshold,     &
               &            albsi, icedepth, snowsi,                                    &
-              &            tslb, emiss, albedo, z0, tsk, snow, snowc, snowh,           &
+              &            tslb, emiss, albedo, z0, tsk, snow, snowc, snowh,esnow,     &
               &            chs, chs2, cqs2,                                            &
               &            br, znt, lh, hfx, qfx, potevp, grdflx, qsfc, acsnow,        &
               &            acsnom, snopcx, sfcrunoff, noahres,                         &
@@ -3103,7 +3106,7 @@ CONTAINS
               &            t_phy, qv_curr, p8w, dz8w, num_soil_layers, dt, frpcpn, sr, &
               &            glw, swdown, rainbl, snoalb, qgh, xice, xice_threshold,     &
               &            albsi, icedepth, snowsi,                                    &
-              &            tslb, emiss, albedo, z0, tsk, snow, snowc, snowh,           &
+              &            tslb, emiss, albedo, z0, tsk, snow, snowc, snowh, esnow,    &
               &            chs, chs2, cqs2,                                            &
               &            br, znt, lh, hfx, qfx, potevp, grdflx, qsfc, acsnow,        &
               &            acsnom, snopcx, sfcrunoff, noahres,                         &

@@ -34,7 +34,7 @@ CONTAINS
                   ALBEDO,ALBBCK,ZNT,Z0,TMN,XLAND,XICE,EMISS,EMBCK,   &
                   SNOWC,QSFC,RAINBL,MMINLU,                     &
                   num_soil_layers,DT,DZS,ITIMESTEP,             &
-                  SMOIS,TSLB,SNOW,CANWAT,                       &
+                  SMOIS,TSLB,SNOW,ESNOW,CANWAT,                 &
                   CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                   myj,frpcpn,                                   &
                   SH2O,SNOWH,                                   & !H
@@ -133,6 +133,7 @@ CONTAINS
 !                note: frozen soil moisture (i.e., soil ice) = SMOIS - SH2O
 !-- SNOWH       actual snow depth (m)
 !-- SNOW        liquid water-equivalent snow depth (m)
+!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- ALBEDO      time-varying surface albedo including snow effect (unitless fraction)
 !-- ALBBCK      background surface albedo (unitless fraction)
 !-- CHS          surface exchange coefficient for heat and moisture (m s-1);
@@ -178,7 +179,6 @@ CONTAINS
 !-- EDIR        direct soil evaporation (W m-2)
 !-- ET          plant transpiration from a particular root layer (W m-2)
 !-- ETT         total plant transpiration (W m-2)
-!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- DRIP        through-fall of precip and/or dew in excess of canopy
 !                 water-holding capacity (m)
 !-- DEW         dewfall (or frostfall for t<273.15) (M)
@@ -317,10 +317,10 @@ CONTAINS
                                                            QFX, &
                                                             LH, &
                                                         GRDFLX, &
-                                                          QSFC,&
-                                                          CQS2,&
-                                                          CHS,   &
-                                                          CHS2,&
+                                                          QSFC, &
+                                                          CQS2, &
+                                                          CHS , &
+                                                          CHS2, &
                                                           SNOW, &
                                                          SNOWC, &
                                                          SNOWH, & !new
@@ -339,7 +339,9 @@ CONTAINS
                                                         ALBEDO, &
                                                            ZNT
    REAL,    DIMENSION( ims:ime, jms:jme )                     , &
-            INTENT(OUT)      ::                         NOAHRES
+            INTENT(OUT)      ::                        NOAHRES, &
+                                                         ESNOW
+
    INTEGER, INTENT(IN)       ::                         OPT_THCND
 
 ! Noah UA changes
@@ -365,7 +367,7 @@ CONTAINS
 
       REAL, DIMENSION(1:num_soil_layers) ::  SMAV
 
-      REAL  ::  BETA, ETP, SSOIL,EC, EDIR, ESNOW, ETT,        &
+      REAL  ::  BETA, ETP, SSOIL,EC, EDIR, ETT,        &
                 FLX1,FLX2,FLX3, DRIP,DEW,FDOWN,RC,PC,RSMIN,XLAI,  &
 !                RCS,RCT,RCQ,RCSOIL
                 RCS,RCT,RCQ,RCSOIL,FFROZP
@@ -983,7 +985,7 @@ CONTAINS
           STC, 'SMC',SMC, 'SWC',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
           'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
           'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-          'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+          'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
           'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
           'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
           'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &
@@ -1038,7 +1040,7 @@ CONTAINS
                  ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD,  &    !S
                  CMC,T1,STC,SMC,SWC,SNOWHK,SNEQV,ALBEDOK,CHK,dummy,&    !H
                  ETA,SHEAT, ETA_KINEMATIC,FDOWN,                   &    !O
-                 EC,EDIR,ET,ETT,ESNOW,DRIP,DEW,                    &    !O
+                 EC,EDIR,ET,ETT,ESNOW(I,J),DRIP,DEW,               &    !O
                  BETA,ETP,SSOIL,                                   &    !O
                  FLX1,FLX2,FLX3,                                   &    !O
 		 FLX4,FVB,FBUR,FGSN,UA_PHYS,                       &    !UA 
@@ -1095,7 +1097,7 @@ CONTAINS
             &    ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD, &    !S
             &    T1,STC(1:NSOIL),SNOWHK,SNEQV,ALBEDOK,CHK,        &    !H
             &    ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
-            &    ESNOW,DEW,                                       &    !O
+            &    ESNOW(I,J),DEW,                                  &    !O
             &    ETP,SSOIL,                                       &    !O
             &    FLX1,FLX2,FLX3,                                  &    !O
             &    SNOMLT,SNCOVR,                                   &    !O
@@ -1125,7 +1127,7 @@ CONTAINS
           STC, 'SMC',SMC, 'SWc',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
           'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
           'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-          'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+          'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
           'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
           'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
           'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &
@@ -2218,7 +2220,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                   ALBEDO,ALBBCK,ZNT,Z0,TMN,XLAND,XICE,EMISS,EMBCK,   &
                   SNOWC,QSFC,RAINBL,MMINLU,                     &
                   num_soil_layers,DT,DZS,ITIMESTEP,             &
-                  SMOIS,TSLB,SNOW,CANWAT,                       &
+                  SMOIS,TSLB,SNOW,ESNOW,CANWAT,                 &
                   CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                   myj,frpcpn,                                   &
                   SH2O,SNOWH,                                   & !H
@@ -2339,6 +2341,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
 !                note: frozen soil moisture (i.e., soil ice) = SMOIS - SH2O
 !-- SNOWH       actual snow depth (m)
 !-- SNOW        liquid water-equivalent snow depth (m)
+!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- ALBEDO      time-varying surface albedo including snow effect (unitless fraction)
 !-- ALBBCK      background surface albedo (unitless fraction)
 !-- CHS          surface exchange coefficient for heat and moisture (m s-1);
@@ -2383,7 +2386,6 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
 !-- EDIR        direct soil evaporation (W m-2)
 !-- ET          plant transpiration from a particular root layer (W m-2)
 !-- ETT         total plant transpiration (W m-2)
-!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- DRIP        through-fall of precip and/or dew in excess of canopy
 !                 water-holding capacity (m)
 !-- DEW         dewfall (or frostfall for t<273.15) (M)
@@ -2522,11 +2524,12 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                                                            QFX, &
                                                             LH, &
                                                         GRDFLX, &
-                                                          QSFC,&
-                                                          CQS2,&
-                                                          CHS,   &
-                                                          CHS2,&
+                                                          QSFC, &
+                                                          CQS2, &
+                                                          CHS , &
+                                                          CHS2, &
                                                           SNOW, &
+                                                         ESNOW, &
                                                          SNOWC, &
                                                          SNOWH, & !new
                                                         CANWAT, &
@@ -2570,7 +2573,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
 
       REAL, DIMENSION(1:num_soil_layers) ::  SMAV
 
-      REAL  ::  BETA, ETP, SSOIL,EC, EDIR, ESNOW, ETT,        &
+      REAL  ::  BETA, ETP, SSOIL,EC, EDIR, ETT,        &
                 FLX1,FLX2,FLX3, DRIP,DEW,FDOWN,RC,PC,RSMIN,XLAI,  &
 !                RCS,RCT,RCQ,RCSOIL
                 RCS,RCT,RCQ,RCSOIL,FFROZP
@@ -3334,7 +3337,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                 STC, 'SMC',SMC, 'SWC',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
                 'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
                 'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
                 'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
                 'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
                 'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &
@@ -3375,7 +3378,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                        ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD,  &    !S
                        CMC,T1,STC,SMC,SWC,SNOWHK,SNEQV,ALBEDOK,CHK,dummy,&    !H
                        ETA,SHEAT, ETA_KINEMATIC,FDOWN,                   &    !O
-                       EC,EDIR,ET,ETT,ESNOW,DRIP,DEW,                    &    !O
+                       EC,EDIR,ET,ETT,ESNOW(I,J),DRIP,DEW,               &    !O
                        BETA,ETP,SSOIL,                                   &    !O
                        FLX1,FLX2,FLX3,                                   &    !O
       		 FLX4,FVB,FBUR,FGSN,UA_PHYS,                             &    !UA 
@@ -3416,7 +3419,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                   &    ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD, &    !S
                   &    T1,STC(1:NSOIL),SNOWHK,SNEQV,ALBEDOK,CHK,        &    !H
                   &    ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
-                  &    ESNOW,DEW,                                       &    !O
+                  &    ESNOW(I,J),DEW,                                  &    !O
                   &    ETP,SSOIL,                                       &    !O
                   &    FLX1,FLX2,FLX3,                                  &    !O
                   &    SNOMLT,SNCOVR,                                   &    !O
@@ -3442,7 +3445,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                 STC, 'SMC',SMC, 'SWc',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
                 'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
                 'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
                 'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
                 'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
                 'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &
@@ -4220,7 +4223,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                 STC, 'SMC',SMC, 'SWC',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
                 'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
                 'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
                 'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
                 'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
                 'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &
@@ -4260,7 +4263,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                        ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD,  &    !S
                        CMC,T1,STC,SMC,SWC,SNOWHK,SNEQV,ALBEDOK,CHK,dummy,&    !H
                        ETA,SHEAT, ETA_KINEMATIC,FDOWN,                   &    !O
-                       EC,EDIR,ET,ETT,ESNOW,DRIP,DEW,                    &    !O
+                       EC,EDIR,ET,ETT,ESNOW(I,J),DRIP,DEW,               &    !O
                        BETA,ETP,SSOIL,                                   &    !O
                        FLX1,FLX2,FLX3,                                   &    !O
       		 FLX4,FVB,FBUR,FGSN,UA_PHYS,                             &    !UA 
@@ -4301,7 +4304,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                   &    ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD, &    !S
                   &    T1,STC(1:NSOIL),SNOWHK,SNEQV,ALBEDOK,CHK,        &    !H
                   &    ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
-                  &    ESNOW,DEW,                                       &    !O
+                  &    ESNOW(I,J),DEW,                                  &    !O
                   &    ETP,SSOIL,                                       &    !O
                   &    FLX1,FLX2,FLX3,                                  &    !O
                   &    SNOMLT,SNCOVR,                                   &    !O
@@ -4329,7 +4332,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                 STC, 'SMC',SMC, 'SWc',SWC,'SNOWHK',SNOWHK,'SNEQV',SNEQV,&
                 'ALBEDOK',ALBEDOK,'CHK',CHK,'ETA',ETA,'SHEAT',SHEAT,      &
                 'ETA_KINEMATIC',ETA_KINEMATIC, 'FDOWN',FDOWN,'EC',EC,   &
-                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW,'DRIP',DRIP,&
+                'EDIR',EDIR,'ET',ET,'ETT',ETT,'ESNOW',ESNOW(I,J),'DRIP',DRIP,&
                 'DEW',DEW,'BETA',BETA,'ETP',ETP,'SSOIL',SSOIL,'FLX1',FLX1,&
                 'FLX2',FLX2,'FLX3',FLX3,'SNOMLT',SNOMLT,'SNCOVR',SNCOVR,&
                 'RUNOFF1',RUNOFF1,'RUNOFF2',RUNOFF2,'RUNOFF3',RUNOFF3, &

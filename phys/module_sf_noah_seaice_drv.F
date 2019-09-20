@@ -8,7 +8,7 @@ contains
        &                  T3D, QV3D, P8W3D, DZ8W, NUM_SOIL_LAYERS, DT, FRPCPN, SR,      &
        &                  GLW, SWDOWN, RAINBL, SNOALB2D, QGH, XICE, XICE_THRESHOLD,     &
        &                  ALBSI, ICEDEPTH, SNOWSI,                                      &
-       &                  TSLB, EMISS, ALBEDO, Z02D, TSK, SNOW, SNOWC, SNOWH2D, &
+       &                  TSLB, EMISS, ALBEDO, Z02D, TSK, SNOW, SNOWC, SNOWH2D, ESNOW,  &
        &                  CHS, CHS2, CQS2,                                              &
        &                  RIB, ZNT, LH, HFX, QFX, POTEVP, GRDFLX, QSFC, ACSNOW,         &
        &                  ACSNOM, SNOPCX, SFCRUNOFF, NOAHRES,                           &
@@ -101,6 +101,7 @@ contains
          &                                               SNOPCX, &
          &                                            SFCRUNOFF, &
          &                                              NOAHRES, &
+         &                                                ESNOW, &
          &                                                 CHS2
 
     REAL,    DIMENSION( ims:ime, jms:jme )                      ,&
@@ -151,7 +152,6 @@ contains
     REAL    :: SHEAT
     REAL    :: ETA_KINEMATIC
     REAL    :: FDOWN
-    REAL    :: ESNOW
     REAL    :: DEW
     REAL    :: ETP
     REAL    :: SSOIL
@@ -384,7 +384,6 @@ contains
           SHEAT            = -1.E36
           ETA_KINEMATIC    = -1.E36
           FDOWN            = -1.E36  ! Returned value unused.  Might as well be local to SFLX_SEAICE ?
-          ESNOW            = -1.E36  ! Returned value unused.  Might as well be local to SFLX_SEAICE ?
           DEW              = -1.E36  ! Returned value unused.  Might as well be local to SFLX_SEAICE ?
           ETP              = -1.E36
           SSOIL            = -1.E36
@@ -406,7 +405,7 @@ contains
                &           T1, STC, SNOWH, SNEQV, ALBEDOK, CH,              &    !H
                &           ALBEDOSI, SNOWONSI,                              &
                &           ETA, SHEAT, ETA_KINEMATIC, FDOWN,                &    !O
-               &           ESNOW, DEW, ETP, SSOIL, FLX1, FLX2, FLX3,        &    !O
+               &           ESNOW(I,J), DEW, ETP, SSOIL, FLX1, FLX2, FLX3,   &    !O
                &           SNOMLT, SNCOVR,                                  &    !O
                &           RUNOFF1, Q1, RIBB)
 
