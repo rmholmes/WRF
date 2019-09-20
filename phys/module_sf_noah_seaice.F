@@ -115,7 +115,7 @@ CONTAINS
 !              SURFACE)
 !   FDOWN      Radiation forcing at the surface (W m-2) = SOLDN*(1-alb)+LWDN
 ! ----------------------------------------------------------------------
-!   ESNOW      SUBLIMATION FROM (OR DEPOSITION TO IF <0) SNOWPACK (W m-2)
+!   ESNOW      SUBLIMATION FROM (OR DEPOSITION TO IF <0) SNOWPACK (kg m-2 s-1)
 !   DEW        DEWFALL (OR FROSTFALL FOR T<273.15) (M)
 ! ----------------------------------------------------------------------
 !   ETP        POTENTIAL EVAPORATION (W m-2)
@@ -505,10 +505,9 @@ CONTAINS
 ! CONVERT EVAP TERMS FROM KINEMATIC (KG M-2 S-1) TO ENERGY UNITS (W M-2)
 ! ----------------------------------------------------------------------
 
-      ESNOW = ESNOW * LSUBS
       ETP = ETP*((1.-SNCOVR)*LVH2O + SNCOVR*LSUBS)
       IF (ETP .GT. 0.) THEN
-         ETA = ESNOW
+         ETA = ESNOW * LSUBS
       ELSE
          ETA = ETP
       ENDIF
@@ -875,10 +874,6 @@ CONTAINS
        ETANRG = ETP*((1.-SNCOVR)*LSUBC + SNCOVR*LSUBS)
     ELSE
        ETP1 = ETP * 0.001
-       ESNOW  = ETP
-       ESNOW1 = ESNOW*0.001
-       ESNOW2 = ESNOW1*DT
-       ETANRG = ESNOW*LSUBS
        ESNOW  = ETP*SNCOVR
        ESNOW1 = ESNOW*0.001
        ESNOW2 = ESNOW1*DT

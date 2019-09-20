@@ -178,7 +178,7 @@ CONTAINS
 !-- EDIR        direct soil evaporation (W m-2)
 !-- ET          plant transpiration from a particular root layer (W m-2)
 !-- ETT         total plant transpiration (W m-2)
-!-- ESNOW       sublimation from (or deposition to if <0) snowpack (W m-2)
+!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- DRIP        through-fall of precip and/or dew in excess of canopy
 !                 water-holding capacity (m)
 !-- DEW         dewfall (or frostfall for t<273.15) (M)
@@ -2383,7 +2383,7 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
 !-- EDIR        direct soil evaporation (W m-2)
 !-- ET          plant transpiration from a particular root layer (W m-2)
 !-- ETT         total plant transpiration (W m-2)
-!-- ESNOW       sublimation from (or deposition to if <0) snowpack (W m-2)
+!-- ESNOW       sublimation from (or deposition to if <0) snowpack (kg m-2 s-1)
 !-- DRIP        through-fall of precip and/or dew in excess of canopy
 !                 water-holding capacity (m)
 !-- DEW         dewfall (or frostfall for t<273.15) (M)
