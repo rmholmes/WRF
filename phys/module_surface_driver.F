@@ -1527,129 +1527,106 @@ CONTAINS
 ! end check lake model    
          XICE_save(I,J) = XICEM(I,J) 
 
-         IF ( FRACTIONAL_SEAICE == 1 ) then
-            IF ( ( XICE(I,J) .NE. XICEM(I,J) ) .AND. ( XICEM(I,J) .GT. XICE_THRESHOLD ) ) THEN
-               ! Fractional values of ALBEDO and EMISSIVITY are valid according to the 
-               ! earlier fractional seaice value, XICEM.  Recompute them for the new 
-               ! seaice value XICE.
-                IF ( SEAICE_ALBEDO_OPT ==2 ) THEN
-                    IF ( ALBSI(I,J) < -1.E6 ) THEN
-                        call wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
-                    ENDIF
-                    ALBEDO(I,J) = 0.08 + XICE(I,J)/XICEM(I,J) * ( ALBSI(I,J) - 0.08 )
-                ELSE
-                    ALBEDO(I,J) = 0.08 + XICE(I,J)/XICEM(I,J) * ( ALBEDO(I,J) - 0.08 )
-                ENDIF
-                EMISS (I,J) = 0.98 + XICE(I,J)/XICEM(I,J) * ( EMISS (I,J) - 0.98 )
-! use old tsk from seaice part
-                TSK(I,J) = TSK_SAVE(I,J)*XICE(I,J) + (1.-XICE(I,J))*SST(I,J)
-            ENDIF
+         ! was a sea-ice point and is still a sea-ice point but with a different fraction of sea-ice
+         IF ( XICE(I,J) .NE. XICEM(I,J) .AND. XICE(I,J) .GT. XICE_THRESHOLD .AND. XICEM(I,J) .GT. XICE_THRESHOLD ) THEN
+            SELECT CASE ( SEAICE_ALBEDO_OPT )
+            CASE ( 0, 1 )
+               ALBEDO(I,J) = SEAICE_ALBEDO_DEFAULT * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
+            CASE ( 2 )              
+               IF ( ALBSI(I,J) < -1.E6 ) THEN
+                  CALL wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
+               ENDIF
+               ALBEDO(I,J) = ALBSI(I,J) * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
+            END SELECT
+            EMISS(I,J)  = 0.98 * XICE(I,J) + 0.98 * ( 1.0-XICE(I,J) )
+            TSK(I,J) = TSK_SAVE(I,J)*XICE(I,J) + (1.-XICE(I,J))*SST(I,J)
          ENDIF
 
-        IF ( XLAND(i,j) .GT. 1.5 .AND. XICE(I,J) .GE. XICE_THRESHOLD .AND. XICEM(I,J) .LT. XICE_THRESHOLD ) THEN
-          ! water point turns to sea-ice point
-          XICEM(I,J) = XICE(I,J)
-          XLAND(I,J) = 1.
-          IVGTYP(I,J) = ISICE
-          ISLTYP(I,J) = 16
-          VEGFRA(I,J) = 0.
-          TMN(I,J) = 271.4
-
-          ! Over new ice, initial guesses of ALBEDO and EMISS are
-          ! based on default water and ice values for albedo and
-          ! emissivity.  The land-surface schemes can update these
-          ! values
-
-          SELECT CASE ( SEAICE_ALBEDO_OPT )
-          CASE ( 0, 1 )
-
-              ALBEDO(I,J) = SEAICE_ALBEDO_DEFAULT * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
-              ALBBCK(I,J) = SEAICE_ALBEDO_DEFAULT
-
-          CASE ( 2 ) 
-              
-              IF ( ALBSI(I,J) < -1.E6 ) THEN
-                  call wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
-              ENDIF
-
-              ALBEDO(I,J) = ALBSI(I,J) * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
-              ALBBCK(I,J) = ALBSI(I,J)
-
-          END SELECT
-
-          EMISS(I,J)  = 0.98 * XICE(I,J) + 0.98 * ( 1.0-XICE(I,J) )
-          EMBCK(I,J)  = 0.98
-          DO nk = 1, num_soil_layers
-            TSLB(I,NK,J) = TSK(I,J)
-            SMOIS(I,NK,J) = 1.0
-            SH2O(I,NK,J) = 0.0
-          ENDDO
-        ENDIF
-     IF (lakemodel.ne.1) then
-         IF(XLAND(i,j) .GT. 1.5) THEN
-           IF ( SST(i,j) .LT. 350. .and. SST(i,j) .GT. 250.) THEN
-            TSK(i,j)   =SST(i,j)
-            TSLB(i,1,j)=SST(i,j)
-           ENDIF
-          ENDIF
-     ELSE
+         IF ( XLAND(i,j) .GT. 1.5 .AND. XICE(I,J) .GE. XICE_THRESHOLD .AND. XICEM(I,J) .LT. XICE_THRESHOLD ) THEN
+            ! water point turns to sea-ice point
+            XICEM(I,J) = XICE(I,J)
+            XLAND(I,J) = 1.
+            IVGTYP(I,J) = ISICE
+            ISLTYP(I,J) = 16
+            VEGFRA(I,J) = 0.
+            TMN(I,J) = 271.4
+            
+            ! Over new ice, initial guesses of ALBEDO and EMISS are
+            ! based on default water and ice values for albedo and
+            ! emissivity.  The land-surface schemes can update these
+            ! values
+            
+            SELECT CASE ( SEAICE_ALBEDO_OPT )
+            CASE ( 0, 1 )
+               ALBEDO(I,J) = SEAICE_ALBEDO_DEFAULT * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
+               ALBBCK(I,J) = SEAICE_ALBEDO_DEFAULT
+            CASE ( 2 )              
+               IF ( ALBSI(I,J) < -1.E6 ) THEN
+                  CALL wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
+               ENDIF
+               ALBEDO(I,J) = ALBSI(I,J) * XICE(I,J) + 0.08 * ( 1.0-XICE(I,J) )
+               ALBBCK(I,J) = ALBSI(I,J)
+            END SELECT
+            EMISS(I,J)  = 0.98 * XICE(I,J) + 0.98 * ( 1.0-XICE(I,J) )
+            EMBCK(I,J)  = 0.98
+            DO nk = 1, num_soil_layers
+               TSLB(I,NK,J) = TSK(I,J)
+               SMOIS(I,NK,J) = 1.0
+               SH2O(I,NK,J) = 0.0
+            ENDDO
+         ENDIF
+        
+         IF ( XLAND(i,j) .LT. 1.5 .AND. XICEM(I,J) .GE. XICE_THRESHOLD .AND. XICE(I,J) .LT. XICE_THRESHOLD ) THEN
+            ! sea-ice point turns to water point
+            XICEM(I,J) = XICE(I,J)
+            XLAND(I,J) = 2.
+            IVGTYP(I,J) = ISWATER
+            ISLTYP(I,J) = 14
+            VEGFRA(I,J) = 0.
+            SNOW(I,J)  = 0.
+            SNOWC(I,J) = 0.
+            SNOWH(I,J) = 0.
+            TMN(I,J) = SST(I,J)
+            ALBEDO(I,J) = 0.08
+            ALBBCK(I,J) = 0.08
+            EMISS(I,J)  = 0.98
+            EMBCK(I,J)  = 0.98
+            DO nk = 1, num_soil_layers
+               TSLB(I,NK,J) = SST(I,J)
+               SMOIS(I,NK,J) = 1.0
+               SH2O(I,NK,J) = 1.0
+            ENDDO
+         ENDIF
+          
+         IF (lakemodel.NE.1) THEN
+            IF(XLAND(i,j) .GT. 1.5) THEN
+               IF ( SST(i,j) .LT. 350. .AND. SST(i,j) .GT. 250.) THEN
+                  TSK(i,j)   =SST(i,j)
+                  TSLB(i,1,j)=SST(i,j)
+               ENDIF
+            ENDIF
+         ELSE
 #if (EM_CORE==1)
-!       if(lakeflag.eq.1) then
-!         IF(XLAND(i,j) .GT. 1.5.AND.LAKEMASK(I,J).NE.1) THEN
-!           IF ( SST(i,j) .LT. 350. .and. SST(i,j) .GT. 250.) THEN
-!            TSK(i,j)   =SST(i,j)
-!            TSLB(i,1,j)=SST(i,j)
-!           ENDIF
-!          ENDIF
-!       else
-!         if(XLAND(i,j) .GT. 1.5.and.ht(i,j).lt.lake_min_elev) then
-!           IF ( SST(i,j) .LT. 350. .and. SST(i,j) .GT. 250.) THEN
-!            TSK(i,j)   =SST(i,j)
-!            TSLB(i,1,j)=SST(i,j)
-!           ENDIF
-!          ENDIF
-!       endif   ! (lakeflag=1)
-         IF(XLAND(i,j) .GT. 1.5.AND.LAKEMASK(I,J).NE.1) THEN
-           IF ( SST(i,j) .LT. 350. .and. SST(i,j) .GT. 250.) THEN
-            TSK(i,j)   =SST(i,j)
-            TSLB(i,1,j)=SST(i,j)
-           ENDIF
-          ENDIF
+            IF(XLAND(i,j) .GT. 1.5.AND.LAKEMASK(I,J).NE.1) THEN
+               IF ( SST(i,j) .LT. 350. .AND. SST(i,j) .GT. 250.) THEN
+                  TSK(i,j)   =SST(i,j)
+                  TSLB(i,1,j)=SST(i,j)
+               ENDIF
+            ENDIF
 #else
-       IF(XLAND(i,j) .GT. 1.5.and.ht(i,j).lt.lake_min_elev) then
-           IF ( SST(i,j) .LT. 350. .and. SST(i,j) .GT. 250.) THEN
-            TSK(i,j)   =SST(i,j)
-            TSLB(i,1,j)=SST(i,j)
-           ENDIF
-       ENDIF
+            IF(XLAND(i,j) .GT. 1.5.AND.ht(i,j).LT.lake_min_elev) THEN
+               IF ( SST(i,j) .LT. 350. .AND. SST(i,j) .GT. 250.) THEN
+                  TSK(i,j)   =SST(i,j)
+                  TSLB(i,1,j)=SST(i,j)
+               ENDIF
+            ENDIF
 #endif
-     ENDIF  ! (lakemodel=1)
-        IF ( XLAND(i,j) .LT. 1.5 .AND. XICEM(I,J) .GE. XICE_THRESHOLD .AND. XICE(I,J) .LT. XICE_THRESHOLD ) THEN
-! sea-ice point turns to water point
-          XICEM(I,J) = XICE(I,J)
-          XLAND(I,J) = 2.
-          IVGTYP(I,J) = ISWATER
-          ISLTYP(I,J) = 14
-          VEGFRA(I,J) = 0.
-          SNOW(I,J)  = 0.
-          SNOWC(I,J) = 0.
-          SNOWH(I,J) = 0.
-          TMN(I,J) = SST(I,J)
-          ALBEDO(I,J) = 0.08
-          ALBBCK(I,J) = 0.08
-          EMISS(I,J)  = 0.98
-          EMBCK(I,J)  = 0.98
-          DO nk = 1, num_soil_layers
-            TSLB(I,NK,J) = SST(I,J)
-            SMOIS(I,NK,J) = 1.0
-            SH2O(I,NK,J) = 1.0
-          ENDDO
-        ENDIF
-
-        XICE_save(I,J) = XICEM(I,J)
-        XICEM(i,j) = XICE(i,j)
-        TSK_SAVE(I,J) = TSK(I, J)
-
+         ENDIF  ! (lakemodel=1)
+         
+         XICE_save(I,J) = XICEM(I,J)
+         XICEM(i,j) = XICE(i,j)
+         TSK_SAVE(I,J) = TSK(I, J)
+         
       ENDDO
       ENDDO
     ENDDO
