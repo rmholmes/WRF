@@ -264,18 +264,23 @@ CONTAINS
                                                         TH2,T2,Q2
 
       REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme )              , &
-                INTENT(OUT)     ::              ck,cka,cd,cda,ustm
+                INTENT(OUT)     ::              ck,cka,cd,cda
+      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme )              , &
+                INTENT(INOUT)   ::              ustm
 !
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
-                INTENT(INOUT)               ::             REGIME, &
-                                                              HFX, &
+                INTENT(INOUT)               ::                HFX, &
                                                               QFX, &
-                                                               LH, &
                                                          MOL,RMOL, &
-                                                        QSFC, QGH, &
+                                                             QSFC, &
                                                               ZNT, &
                                                               ZOL, &
-                                                              UST, &
+                                                              UST
+
+      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
+                INTENT(OUT)                 ::             REGIME, &
+                                                               LH, &
+                                                              QGH, &
                                                               CPM, &
                                                              CHS2, &
                                                              CQS2, &
@@ -284,6 +289,7 @@ CONTAINS
                                                         FLHC,FLQC, &
                                                    GZ1OZ0,WSPD,BR, &
                                                         PSIM,PSIH
+
 
 !ADDITIONAL OUTPUT
 !JOE-begin
@@ -348,6 +354,7 @@ CONTAINS
               vt1(i)=0.
               vq1(i)=0.
               UST(i,j)=MAX(0.025*SQRT(U1D(i)*U1D(i) + V1D(i)*V1D(i)),0.001)
+              USTM(i,j)=UST(i,j)
               MOL(i,j)=0.     ! Tstar
               QSFC(i,j)=QV3D(i,kts,j)/(1.+QV3D(i,kts,j))
               qstar(i,j)=0.0
@@ -509,13 +516,16 @@ CONTAINS
                                                             RHO1D, &
                                                           vt1,vq1
 
-      REAL,     DIMENSION( ims:ime ), INTENT(INOUT) ::     REGIME, &
-                                                       HFX,QFX,LH, &
+      REAL,     DIMENSION( ims:ime ), INTENT(INOUT) ::    HFX,QFX, &
                                                          MOL,RMOL, &
-                                                         QGH,QSFC, &
+                                                             QSFC, &
                                                               ZNT, &
                                                               ZOL, &
-                                                              UST, &
+                                                              UST
+
+      REAL,     DIMENSION( ims:ime ), INTENT(OUT) ::       REGIME, &
+                                                               LH, &
+                                                              QGH, &
                                                               CPM, &
                                                         CHS2,CQS2, &
                                                            CHS,CH, &
@@ -524,6 +534,7 @@ CONTAINS
                                                              WSPD, &
                                                                BR, &
                                                         PSIM,PSIH
+
       REAL,     DIMENSION( its:ite ), INTENT(IN)   ::     rstoch1D
 
       ! DIAGNOSTIC OUTPUT
@@ -531,7 +542,9 @@ CONTAINS
                                                         TH2,T2,Q2
 
       REAL, OPTIONAL, DIMENSION( ims:ime )                       , &
-                INTENT(OUT)     ::              ck,cka,cd,cda,ustm
+                INTENT(OUT)     ::              ck,cka,cd,cda
+      REAL, OPTIONAL, DIMENSION( ims:ime )                       , &
+                INTENT(INOUT)     ::            ustm
 !--------------------------------------------
 !JOE-additinal output
       REAL,     DIMENSION( ims:ime ) ::        zratio,wstar,qstar, &
