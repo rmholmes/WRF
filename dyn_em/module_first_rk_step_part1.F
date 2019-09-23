@@ -524,7 +524,8 @@ BENCH_START(surf_driver_tim)
      &        ,NDAY=grid%nday          ,TMN_UPDATE=grid%tmn_update      ,YR=yr            &
      &        ,TSLB=grid%tslb          ,T_PHY=t_phy        ,U10=grid%u10            &
      &        ,URATX=grid%uratx        ,VRATX=grid%vratx   ,TRATX=grid%tratx        &
-     &        ,UDRUNOFF=grid%udrunoff  ,UST=grid%ust       ,UZ0=grid%uz0            &
+     &        ,UDRUNOFF=grid%udrunoff  ,UZ0=grid%uz0                                &
+     &        ,UST=grid%ust            ,UST_SEA=grid%ust_sea,UST_ICE=grid%ust_ice   &
      &        ,U_FRAME=grid%u_frame    ,U_PHY=grid%u_phy   ,V10=grid%v10            &
      &        ,UOCE=grid%uoce          ,VOCE=grid%voce                              &
      &        ,VEGFRA=grid%vegfra      ,VZ0=grid%vz0       ,V_FRAME=grid%v_frame    &
@@ -534,9 +535,10 @@ BENCH_START(surf_driver_tim)
      &        ,Z0=grid%z0              ,Z=grid%z        ,ZNT=grid%znt               &
      &        ,ZS=grid%zs              ,ALBSI=grid%albsi , ICEDEPTH=grid%icedepth   &
      &        ,SNOWSI=grid%snowsi                                                   &
-     &        ,XICEM=grid%xicem   ,ISICE=grid%landuse_isice                         &
-     &        ,USTM=grid%ustm          ,CK=grid%ck         ,CKA=grid%cka            &
-     &                                 ,CD=grid%cd         ,CDA=grid%cda            &
+     &        ,XICEM=grid%xicem       ,ISICE=grid%landuse_isice                     &
+     &        ,USTM=grid%ustm         ,USTM_SEA=grid%ustm_sea, USTM_ICE=grid%ustm_ice   &
+     &        ,CK=grid%ck             ,CKA=grid%cka                                 &
+     &        ,CD=grid%cd             ,CDA=grid%cda                                 &
      &        ,ISFTCFLX=config_flags%isftcflx, IZ0TLND=config_flags%iz0tlnd         &
      &        ,SF_OCEAN_PHYSICS=config_flags%sf_ocean_physics                       &
      &        ,OML_HML0=config_flags%oml_hml0 ,OML_GAMMA=config_flags%oml_gamma     &
