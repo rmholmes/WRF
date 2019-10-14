@@ -293,6 +293,8 @@ CONTAINS
      &          ,ust_sea,ust_ice,ustm_sea,ustm_ice                    &
      &          ,hfx_sea,hfx_ice,qfx_sea,qfx_ice                      &
      &          ,lh_sea,lh_ice,tsk_sea,tsk_ice                        &
+     &          ,cosa,sina                                            &
+     &          ,xice_input,icedepth_input,snowsi_input,albsi_input   &
      &                                                             )
 
 #if ( ! NMM_CORE == 1 )
@@ -1290,6 +1292,10 @@ CONTAINS
    REAL, OPTIONAL, DIMENSION( ims:ime, 1:num_soil_layers*mosaic_cat, jms:jme ), INTENT(INOUT) :: TRL_URB3D_mosaic
    REAL, OPTIONAL, DIMENSION( ims:ime, 1:num_soil_layers*mosaic_cat, jms:jme ), INTENT(INOUT) :: TBL_URB3D_mosaic
    REAL, OPTIONAL, DIMENSION( ims:ime, 1:num_soil_layers*mosaic_cat, jms:jme ), INTENT(INOUT) :: TGL_URB3D_mosaic
+
+!-------------------------------------------------
+! End of Noah-mosaic related variables 
+!-------------------------------------------------     
      
 !-------------------------------------------------
 ! fractional sea-ice related variables
@@ -1300,11 +1306,13 @@ CONTAINS
    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)::   UST_SEA, UST_ICE
    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)::   LH_SEA, LH_ICE
    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)::   USTM_SEA, USTM_ICE
-
-!-------------------------------------------------
-! End of Noah-mosaic related variables 
-!-------------------------------------------------     
      
+!-------------------------------------------------
+! coupling variables
+!-------------------------------------------------
+   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN   )::   COSA, SINA
+   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN   )::   XICE_INPUT, ICEDEPTH_INPUT, SNOWSI_INPUT, ALBSI_INPUT
+   
 !--------fds (06/2010)---------------------------------------------
      REAL,  DIMENSION( ims:ime, kms:kme, jms:jme ),               &
             OPTIONAL, INTENT(IN) ::                                 CLDFRA
@@ -1431,17 +1439,41 @@ CONTAINS
         &              ips, ipe, jps, jpe, kps, kpe, &
         &              max_edom, cplmask, SST, SST_INPUT )
      
-     CALL cpl_rcv( id, 'UOCE',            &
+     CALL cpl_rcv( id, 'SEAICE_COVER',            &
         &              ids, ide, jds, jde, kds, kde, &
         &              ims, ime, jms, jme, kms, kme, &
         &              ips, ipe, jps, jpe, kps, kpe, &
-        &              max_edom, cplmask, UOCE )
+        &              max_edom, cplmask, XICE, XICE_INPUT )
      
-     CALL cpl_rcv( id, 'VOCE',            &
+     CALL cpl_rcv( id, 'SEAICE_THICK',            &
         &              ids, ide, jds, jde, kds, kde, &
         &              ims, ime, jms, jme, kms, kme, &
         &              ips, ipe, jps, jpe, kps, kpe, &
-        &              max_edom, cplmask, VOCE )
+        &              max_edom, cplmask, ICEDEPTH, ICEDEPTH_INPUT )
+     
+     CALL cpl_rcv( id, 'SEAICE_SNOWDEPTH',            &
+        &              ids, ide, jds, jde, kds, kde, &
+        &              ims, ime, jms, jme, kms, kme, &
+        &              ips, ipe, jps, jpe, kps, kpe, &
+        &              max_edom, cplmask, SNOWSI, SNOWSI_INPUT )
+          
+     CALL cpl_rcv( id, 'SEAICE_ALBEDO',            &
+        &              ids, ide, jds, jde, kds, kde, &
+        &              ims, ime, jms, jme, kms, kme, &
+        &              ips, ipe, jps, jpe, kps, kpe, &
+        &              max_edom, cplmask, ALBSI, ALBSI_INPUT )
+          
+     CALL cpl_rcv( id, 'UOCE', 'VOCE',            &
+        &              ids, ide, jds, jde, kds, kde, &
+        &              ims, ime, jms, jme, kms, kme, &
+        &              ips, ipe, jps, jpe, kps, kpe, &
+        &              max_edom, cplmask, UOCE, VOCE )
+     
+     CALL cpl_rcv( id, 'EOCE', 'NOCE',            &
+        &              ids, ide, jds, jde, kds, kde, &
+        &              ims, ime, jms, jme, kms, kme, &
+        &              ips, ipe, jps, jpe, kps, kpe, &
+        &              max_edom, cplmask, UOCE, VOCE, COSA = cosa, SINA = sina )
      
   END IF
 
@@ -1533,7 +1565,6 @@ CONTAINS
           endif 
 #endif
 ! end check lake model    
-         XICE_save(I,J) = XICEM(I,J) 
 
          ! is a sea-ice point
          IF ( XICE(I,J) .GE. XICE_THRESHOLD ) THEN

@@ -19,6 +19,10 @@ MODULE module_cpl
    PUBLIC cpl_finalize
    PUBLIC cpl_abort
 
+   INTERFACE cpl_rcv
+      MODULE PROCEDURE cpl_rcv_scalar, cpl_rcv_vector
+   END INTERFACE 
+   
 #ifdef key_cpp_oasis3
    LOGICAL     , PARAMETER, PUBLIC :: coupler_on = .TRUE.
    CHARACTER(5), PARAMETER         :: coupler_name = 'oasis'
@@ -72,22 +76,46 @@ CONTAINS
             clprefix = 'WRF_'//clwrfdom//'_EXT_'//clextdom//'_' 
             
             ! Variables that can be received by WRF
-            rcvname(jwrf,jext,1) = clprefix//'SST'                  ! receive Sea surface temperature
-            rcvname(jwrf,jext,2) = clprefix//'UOCE'                 ! receive ocean zonal surface current 
-            rcvname(jwrf,jext,3) = clprefix//'VOCE'                 ! receive ocean meridional surface current 
+            rcvname(jwrf,jext, 1) = clprefix//'SST'                  ! receive Sea surface temperature
+            rcvname(jwrf,jext, 2) = clprefix//'UOCE'                 ! receive ocean zonal      surface current 
+            rcvname(jwrf,jext, 3) = clprefix//'VOCE'                 ! receive ocean meridional surface current 
+            rcvname(jwrf,jext, 4) = clprefix//'EOCE'                 ! receive ocean easward    surface current 
+            rcvname(jwrf,jext, 5) = clprefix//'NOCE'                 ! receive ocean Northward  surface current 
+            rcvname(jwrf,jext, 6) = clprefix//'SEAICE_COVER'         ! receive sea-ice cover (0 = no sea-ice to 1 = no free ocean)
+            rcvname(jwrf,jext, 7) = clprefix//'SEAICE_THICK'         ! receive sea-ice thickness
+            rcvname(jwrf,jext, 8) = clprefix//'SEAICE_SNOWDEPTH'     ! receive sea-ice snow depth
+            rcvname(jwrf,jext, 9) = clprefix//'SEAICE_ALBEDO'        ! receive sea-ice albedo
             
-            ! Variables that can be sent by WRF
-            sndname(jwrf,jext,1) = clprefix//'EVAP-PRECIP'          ! send net fresh water budget: evaporation - total precipitation
-            sndname(jwrf,jext,2) = clprefix//'SURF_NET_SOLAR'       ! send net short wave flux at ground surface
-            sndname(jwrf,jext,3) = clprefix//'SURF_NET_NON-SOLAR'   ! send net non-solar heat flux at ground surface
-            sndname(jwrf,jext,4) = clprefix//'TAUX'                 ! send zonal wind tress at atmosphere-ocean interface
-            sndname(jwrf,jext,5) = clprefix//'TAUY'                 ! send meridional wind tress at atmosphere-ocean interface
-            sndname(jwrf,jext,6) = clprefix//'TAUMOD'               ! send the wind tress module at atmosphere-ocean interface
-            
+            ! Variables that can be sent by WRF : see subroutine cpl_snd2 (below) for calculation details
+            ! mass fluxes
+            sndname(jwrf,jext, 1) = clprefix//'LIQUID_PRECIP'        ! send total liquid precipitation (kg/m2/s = mm/s)
+            sndname(jwrf,jext, 2) = clprefix//'SOLID_PRECIP'         ! send total solid precipitation (kg/m2/s = mm/s)
+            sndname(jwrf,jext, 3) = clprefix//'EVAP-PRECIP'          ! send net fresh water budget: evaporation - total precipitation
+            sndname(jwrf,jext, 4) = clprefix//'SUBLIMATION'          ! send Sublimation over sea-ice           
+            ! heat fluxes
+            sndname(jwrf,jext, 5) = clprefix//'SURF_NET_SOLAR'       ! send net short wave flux at ground surface
+            sndname(jwrf,jext, 6) = clprefix//'SURF_NET_NON-SOLAR'   ! send net non-solar heat flux at ground surface
+            sndname(jwrf,jext, 7) = clprefix//'SURF_NET_NON-SOLAR_ICE'   ! send net non-solar heat flux at atmosphere-sea-ice interface
+            ! momentum fluxes
+            sndname(jwrf,jext, 8) = clprefix//'TAUX'           ! send zonal      wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext, 9) = clprefix//'TAUY'           ! send meridional wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,10) = clprefix//'TAUE'           ! send Eastward   wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,11) = clprefix//'TAUN'           ! send Northward  wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,12) = clprefix//'TAUX_OCE'       ! send zonal      wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,13) = clprefix//'TAUY_OCE'       ! send meridional wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,14) = clprefix//'TAUE_OCE'       ! send Eastward   wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,15) = clprefix//'TAUN_OCE'       ! send Northward  wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,16) = clprefix//'TAUX_ICE'       ! send zonal      wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,17) = clprefix//'TAUY_ICE'       ! send meridional wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,18) = clprefix//'TAUE_ICE'       ! send Eastward   wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,19) = clprefix//'TAUN_ICE'       ! send Northward  wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,20) = clprefix//'TAUMOD'         ! send the wind tress module at atmosphere-ocean/sea-ice interface
          END DO
       END DO
       
-      IF ( coupler_name == 'oasis' ) CALL cpl_oasis_init( kl_comm ) 
+      IF ( coupler_name == 'oasis' ) CALL cpl_oasis_init( kl_comm )
+
+      ! +++ test that tauy is given with taux etc...
       
    END SUBROUTINE cpl_init
    
@@ -269,13 +297,14 @@ CONTAINS
    END FUNCTION cpl_get_fldid
 
    
-   SUBROUTINE cpl_snd( grid )
+   SUBROUTINE cpl_snd( grid, config_flags )
          !!-------------------------------------------------------------------
       !!             ***  SUBROUTINE cpl_snd  ***
       !!
       !! ** Purpose : compute coupling data to be sent and call cpl_sndfield
       !!--------------------------------------------------------------------
-      TYPE(domain), INTENT(IN), POINTER :: grid
+      TYPE(domain),      POINTER, INTENT(IN) :: grid
+      TYPE(grid_config_rec_type), INTENT(IN) :: config_flags
       !
       INTEGER :: ips,ipe,jps,jpe,kps,kpe ! domain dimension on 1 processor
       INTEGER :: ims,ime,jms,jme,kms,kme ! memory domain dimension on 1 processor 
@@ -286,7 +315,7 @@ CONTAINS
          &                          ips, ipe, jps, jpe, kps, kpe  )
 
 #if (EM_CORE == 1)
-      CALL cpl_snd2( grid, grid%num_ext_model_couple_dom,   &
+      CALL cpl_snd2( grid, config_flags, grid%num_ext_model_couple_dom,   &
          &                 ids, ide, jds, jde, kds, kde,    &
          &                 ims, ime, jms, jme, kms, kme,    &
          &                 ips, ipe, jps, jpe, kps, kpe )
@@ -295,89 +324,276 @@ CONTAINS
    END SUBROUTINE cpl_snd
 
 
-   SUBROUTINE cpl_snd2( grid, max_edom                &
-      &                     , ids,ide,jds,jde,kds,kde &
-      &                     , ims,ime,jms,jme,kms,kme &
+   SUBROUTINE cpl_snd2( grid, config_flags, max_edom    &
+      &                     , ids,ide,jds,jde,kds,kde   &
+      &                     , ims,ime,jms,jme,kms,kme   &
       &                     , ips,ipe,jps,jpe,kps,kpe )
       !!-------------------------------------------------------------------
       !!             ***  SUBROUTINE cpl_snd2  ***
       !!
       !! ** Purpose : compute coupling data to be sent and call cpl_sndfield
       !!--------------------------------------------------------------------
-      TYPE(domain), INTENT(IN), POINTER :: grid
-      INTEGER,      INTENT(IN)          :: max_edom    ! max number of external model domains
-      INTEGER,      INTENT(IN)          :: ids,ide,jds,jde,kds,kde
-      INTEGER,      INTENT(IN)          :: ims,ime,jms,jme,kms,kme
-      INTEGER,      INTENT(IN)          :: ips,ipe,jps,jpe,kps,kpe
+      TYPE(domain),      POINTER, INTENT(IN) :: grid
+      TYPE(grid_config_rec_type), INTENT(IN) :: config_flags
+      INTEGER,                    INTENT(IN) :: max_edom    ! max number of external model domains
+      INTEGER,                    INTENT(IN) :: ids,ide,jds,jde,kds,kde
+      INTEGER,                    INTENT(IN) :: ims,ime,jms,jme,kms,kme
+      INTEGER,                    INTENT(IN) :: ips,ipe,jps,jpe,kps,kpe
       !
       REAL, DIMENSION( ips:ipe, jps:jpe ) :: cplsnd
-      REAL, DIMENSION( ips:ipe, jps:jpe ) :: u_uo
-      REAL, DIMENSION( ips:ipe, jps:jpe ) :: v_vo
+      REAL, DIMENSION( ips:ipe, jps:jpe ) :: u_uo, u_ui
+      REAL, DIMENSION( ips:ipe, jps:jpe ) :: v_vo, v_vi
       REAL, DIMENSION( ips:ipe, jps:jpe ) :: wspd
-      REAL, DIMENSION( ips:ipe, jps:jpe ) :: taut
+      REAL, DIMENSION( ips:ipe, jps:jpe ) :: taut, taui, tauj
       INTEGER :: icnt
-      INTEGER :: ifldid
+      INTEGER :: ifldid, ifldidu, ifldidv
       LOGICAL,DIMENSION(max_edom) :: lltosend
       !!--------------------------------------------------------------------
 
 #if (EM_CORE == 1)
 
-      ! we use ipe and not min(ipe, ide-1) the variable we are using are coming from grid and are therefore initialized to 0  
-      
-      ifldid      = cpl_get_fldid( 'EVAP-PRECIP' )
+      ! we use ipe and not min(ipe, ide-1) the variable we are using are coming from grid and are therefore initialized to 0
+
+      !
+      !=========================================================================================================
+      ! mass fluxes
+      !=========================================================================================================
+      !
+      ! LIQUID_PRECIP : total liquid precipitation (kg/m2/s = mm/s, positive downward)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'LIQUID_PRECIP' )
       lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
-         cplsnd(ips:ipe,jps:jpe) = grid%QFX(ips:ipe,jps:jpe) &
-            &                  - ( grid%RAINCV(ips:ipe,jps:jpe)+grid%RAINNCV(ips:ipe,jps:jpe) ) / grid%DT
+         cplsnd(ips:ipe,jps:jpe) = ( grid%RAINCV(ips:ipe,jps:jpe) + grid%RAINNCV(ips:ipe,jps:jpe) ) / grid%DT
          CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
       END IF
       
+      ! SOLID_PRECIP : total solid precipitation (kg/m2/s = mm/s, positive downward)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'SOLID_PRECIP' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         cplsnd(ips:ipe,jps:jpe) = ( grid%SNOWNCV(ips:ipe,jps:jpe)    &
+            &                      + grid%HAILNCV(ips:ipe,jps:jpe) + grid%GRAUPELNCV(ips:ipe,jps:jpe) ) / grid%DT
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+      END IF
+      
+      ! EVAP - PRECIP : total net liquid+solide water fluw (kg/m2/s = mm/s, positive upward)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'EVAP-PRECIP' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN
+         ! first, cumulate liquid+solid precipitation
+         cplsnd(ips:ipe,jps:jpe) = grid%RAINCV( ips:ipe,jps:jpe) + grid%RAINNCV(ips:ipe,jps:jpe) &
+            &                    + grid%SNOWNCV(ips:ipe,jps:jpe) + grid%HAILNCV(ips:ipe,jps:jpe) + grid%GRAUPELNCV(ips:ipe,jps:jpe)
+         ! next, add evaporation
+         cplsnd(ips:ipe,jps:jpe) = grid%QFX(ips:ipe,jps:jpe) - cplsnd(ips:ipe,jps:jpe) / grid%DT
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+      END IF
+
+      ! SUBLIMATION : Sublimation over sea-ice (kg/m2/s = mm/s, positive upward)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'SUBLIMATION' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, grid%QFX_ICE(ips:ipe,jps:jpe) )
+      END IF
+
+      !
+      !=========================================================================================================
+      ! heat fluxes
+      !=========================================================================================================
+      !
+      ! SURF_NET_SOLAR : total net surface solar radiation (W.m-2, positive downward)
+      !--------------------------------------------------------------------------------------------------
       ifldid      = cpl_get_fldid( 'SURF_NET_SOLAR' )
       lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
          CALL cpl_sndfield( grid%id, lltosend, ifldid, grid%GSW(ips:ipe,jps:jpe) )
       END IF
       
+      ! SURF_NET_NON-SOLAR : total net surface non-solar heat flux (W.m-2, positive downward)
+      !                      GLW - LH - HFX - Thermal_radiation
+      !--------------------------------------------------------------------------------------------------
       ifldid      = cpl_get_fldid( 'SURF_NET_NON-SOLAR' )
       lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
-      IF ( COUNT(lltosend) > 0 ) THEN 
-         cplsnd(ips:ipe,jps:jpe) = grid%GLW(ips:ipe,jps:jpe) &
-            &                      - STBOLT * grid%EMISS(ips:ipe,jps:jpe) * grid%SST(ips:ipe,jps:jpe)**4 &
-            &                      - grid%LH(ips:ipe,jps:jpe) - grid%HFX(ips:ipe,jps:jpe) 
+      IF ( COUNT(lltosend) > 0 ) THEN   
+         IF ( config_flags%fractional_seaice == 1 ) THEN   ! use the same emissivity for free ocean  and sea-ice
+            cplsnd(ips:ipe,jps:jpe) = - STBOLT * grid%EMISS(ips:ipe,jps:jpe)                                              &
+               &                        * (   grid%SST    (ips:ipe,jps:jpe)**4 * ( 1.0 - grid%XICE(ips:ipe,jps:jpe) )     &
+               &                            + grid%TSK_ICE(ips:ipe,jps:jpe)**4 *         grid%XICE(ips:ipe,jps:jpe)   )   &
+               &                      + grid%GLW(ips:ipe,jps:jpe) - grid%LH(ips:ipe,jps:jpe) - grid%HFX(ips:ipe,jps:jpe) 
+         ELSE
+            cplsnd(ips:ipe,jps:jpe) = - STBOLT * grid%EMISS(ips:ipe,jps:jpe) * grid%SST(ips:ipe,jps:jpe)**4  &
+               &                      + grid%GLW(ips:ipe,jps:jpe) - grid%LH(ips:ipe,jps:jpe) - grid%HFX(ips:ipe,jps:jpe) 
+         END IF
          CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
       END IF
       
+      ! SURF_NET_NON-SOLAR_ICE : total net non-solar heat flux at atmosphere-sea-ice interface (W.m-2, positive downward) :
+      !                          GLW - LH - HFX - Thermal_radiation
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'SURF_NET_NON-SOLAR_ICE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN   
+         cplsnd(ips:ipe,jps:jpe) = - STBOLT * grid%EMISS(ips:ipe,jps:jpe) * grid%TSK_ICE(ips:ipe,jps:jpe)**4  &
+            &                      + grid%GLW(ips:ipe,jps:jpe) - grid%LH_ICE(ips:ipe,jps:jpe) - grid%HFX_ICE(ips:ipe,jps:jpe) 
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+      END IF
+
+      !
+      !=========================================================================================================
+      ! momentum fluxes
+      !=========================================================================================================
+      !
+      ! TAU[XE](_OCE) or TAU[YN](_OCE) or TAUMOD(_OCE) : prepare common fields
+      !--------------------------------------------------------------------------------------------------
       ! test if we need to compute the module of the wind speed and stres
-      icnt   =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUMOD' ), max_edom ) )
-      icnt   = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX'   ), max_edom ) )
-      icnt   = icnt + count( cpl_tosend( grid%id, cpl_get_fldid( 'TAUY'   ), max_edom ) )
+      icnt =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUMOD'     ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX'       ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE'       ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUMOD_OCE' ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX_OCE'   ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE_OCE'   ), max_edom ) )
       IF ( icnt > 0 ) THEN 
          u_uo(ips:ipe,jps:jpe) = grid%u_phy(ips:ipe,kps,jps:jpe) - grid%uoce(ips:ipe,jps:jpe)
          v_vo(ips:ipe,jps:jpe) = grid%v_phy(ips:ipe,kps,jps:jpe) - grid%voce(ips:ipe,jps:jpe)
          wspd(ips:ipe,jps:jpe) = MAX( SQRT( u_uo(ips:ipe,jps:jpe)**2 + v_vo(ips:ipe,jps:jpe)**2 ), 1.e-7 )
+      END IF
+      
+      ! TAUX or TAUE or TAUMOD : prepare common fields
+      !--------------------------------------------------------------------------------------------------
+      icnt =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUMOD' ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX'   ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE'   ), max_edom ) )
+      IF ( icnt > 0 ) THEN 
          taut(ips:ipe,jps:jpe) = grid%rho(ips:ipe,kps,jps:jpe) * grid%ust(ips:ipe,jps:jpe)**2
       END IF
-      
-      ifldid      = cpl_get_fldid( 'TAUX' )
-      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      icnt =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX' ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE' ), max_edom ) )
+      IF ( icnt > 0 ) THEN 
+          taui(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * u_uo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+          tauj(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * v_vo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+       END IF
+
+      ! TAUX / TAUY : Surface zonal / meridional wind stress at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUX' )
+      ifldidv     = cpl_get_fldid( 'TAUY' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
-         cplsnd(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * u_uo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
-         CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, taui )
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, tauj )
       END IF
       
-      ifldid      = cpl_get_fldid( 'TAUY' )
-      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      ! TAUE / TAUN : Eastward / Northward surface wind stress at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUE' )
+      ifldidv     = cpl_get_fldid( 'TAUN' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
-         cplsnd(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * v_vo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
-         CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)   &
+            &                    - grid%sina(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, cplsnd )
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)   &
+            &                    + grid%sina(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, cplsnd )
       END IF
       
+      ! TAUMOD : Surface wind stress Module at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
       ifldid      = cpl_get_fldid( 'TAUMOD' )
       lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
          CALL cpl_sndfield( grid%id, lltosend, ifldid, taut )
       END IF
       
+      ! TAUX_OCE or TAUE_OCE or TAUMOD_OCE : prepare common fields
+      !--------------------------------------------------------------------------------------------------
+      icnt =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUMOD_OCE' ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX_OCE'   ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE_OCE'   ), max_edom ) )
+      IF ( icnt > 0 ) THEN 
+         taut(ips:ipe,jps:jpe) = grid%rho(ips:ipe,kps,jps:jpe) * grid%ust_sea(ips:ipe,jps:jpe)**2
+      END IF
+      
+      icnt =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX_OCE' ), max_edom ) )
+      icnt = icnt + COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE_OCE' ), max_edom ) )
+      IF ( icnt > 0 ) THEN 
+          taui(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * u_uo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+          tauj(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * v_vo(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+       END IF
+
+      ! TAUX_OCE / TAUY_OCE : Surface zonal / meridional wind stress at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUX_OCE' )
+      ifldidv     = cpl_get_fldid( 'TAUY_OCE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, taui )
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, tauj )
+      END IF
+      
+      ! TAUE_OCE / TAUN_OCE : Eastward / Northward surface wind stress at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUE_OCE' )
+      ifldidv     = cpl_get_fldid( 'TAUN_OCE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)   &
+            &                    - grid%sina(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, cplsnd )
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)   &
+            &                    + grid%sina(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, cplsnd )
+      END IF
+      
+      ! TAUMOD_OCE : Surface wind stress Module at atmosphere-ocean interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'TAUMOD_OCE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, taut )
+      END IF
+            
+      ! TAUX_ICE or TAUY_ICE
+      !--------------------------------------------------------------------------------------------------
+      ! test if we need to compute the module of the wind speed and stres
+      icnt   =        COUNT( cpl_tosend( grid%id, cpl_get_fldid( 'TAUX_ICE' ), max_edom ) )
+      icnt   = icnt + count( cpl_tosend( grid%id, cpl_get_fldid( 'TAUE_ICE' ), max_edom ) )
+      IF ( icnt > 0 ) THEN 
+         u_ui(ips:ipe,jps:jpe) = grid%u_phy(ips:ipe,kps,jps:jpe) ! - grid%uice(ips:ipe,jps:jpe)
+         v_vi(ips:ipe,jps:jpe) = grid%v_phy(ips:ipe,kps,jps:jpe) ! - grid%vice(ips:ipe,jps:jpe)
+         wspd(ips:ipe,jps:jpe) = MAX( SQRT( u_ui(ips:ipe,jps:jpe)**2 + v_vi(ips:ipe,jps:jpe)**2 ), 1.e-7 )
+         taut(ips:ipe,jps:jpe) = grid%rho(ips:ipe,kps,jps:jpe) * grid%ust_ice(ips:ipe,jps:jpe)**2
+         taui(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * u_ui(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+         tauj(ips:ipe,jps:jpe) = taut(ips:ipe,jps:jpe) * v_vi(ips:ipe,jps:jpe) / wspd(ips:ipe,jps:jpe)
+      END IF
+      
+      ! TAUX_ICE / TAUY_ICE : Surface Zonal / meridional wind stress at atmosphere-sea-ice interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUX_ICE' )
+      ifldidv     = cpl_get_fldid( 'TAUY_ICE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, taui )
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, tauj )
+      END IF
+      
+      ! TAUE_ICE / TAUN_ICE : Eastward / Northward surface wind stress at atmosphere-sea-ice interface (N m-2)
+      !--------------------------------------------------------------------------------------------------
+      ifldidu     = cpl_get_fldid( 'TAUE_ICE' )
+      ifldidv     = cpl_get_fldid( 'TAUN_ICE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldidu, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)   &
+            &                    - grid%sina(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidu, cplsnd )
+         cplsnd(ips:ipe,jps:jpe) = grid%cosa(ips:ipe,jps:jpe) * tauj(ips:ipe,jps:jpe)   &
+            &                    + grid%sina(ips:ipe,jps:jpe) * taui(ips:ipe,jps:jpe)
+         CALL cpl_sndfield( grid%id, lltosend, ifldidv, cplsnd )
+      END IF
+
 #endif       
    END SUBROUTINE cpl_snd2
 
@@ -405,7 +621,7 @@ CONTAINS
    END SUBROUTINE cpl_sndfield
 
 
-   SUBROUTINE cpl_rcv( kdomwrf, cdsuffix,            &
+   SUBROUTINE cpl_rcv_scalar( kdomwrf, cdsuffix,            &
       &                ids, ide, jds, jde, kds, kde, &
       &                ims, ime, jms, jme, kms, kme, &
       &                ips, ipe, jps, jpe, kps, kpe, &
@@ -440,7 +656,14 @@ CONTAINS
       IF( .not.lltorcv ) return
          
       IF( PRESENT(pdataobs) ) THEN
-         pdatacpl(ips:ipe,jps:jpe) = pdataobs(ips:ipe,jps:jpe) * ( 1.0 - SUM( pcplmask(ips:ipe,1:max_edom,jps:jpe), dim = 2 ) )
+         ! build mask for data = 1. - sum( cplmask of involved external model(s) for this specific variable ) 
+         pdatacpl(ips:ipe,jps:jpe) = 1.0
+         DO jext = 1, max_edom
+            IF( cpl_toreceive( kdomwrf, jext, ifldid ) ) THEN
+               pdatacpl(ips:ipe,jps:jpe) = pdatacpl(ips:ipe,jps:jpe) - pcplmask(ips:ipe,jext,jps:jpe)
+            END IF
+         END DO
+         pdatacpl(ips:ipe,jps:jpe) = pdataobs(ips:ipe,jps:jpe) * pdatacpl(ips:ipe,jps:jpe)
       ELSE 
          pdatacpl(ips:ipe,jps:jpe) = 0.0
       END IF
@@ -452,7 +675,85 @@ CONTAINS
          END IF
       END DO
 
-   END SUBROUTINE cpl_rcv
+   END SUBROUTINE cpl_rcv_scalar
+
+
+   SUBROUTINE cpl_rcv_vector( kdomwrf, cdsuffixu, cdsuffixv,            &
+      &                ids, ide, jds, jde, kds, kde, &
+      &                ims, ime, jms, jme, kms, kme, &
+      &                ips, ipe, jps, jpe, kps, kpe, &
+      &                max_edom, pcplmask, pdatacplu, pdatacplv, cosa, sina, pdataobsu, pdataobsv )
+      !!-------------------------------------------------------------------
+      !!             ***  SUBROUTINE cpl_rcv  ***
+      !!
+      !! ** Purpose :   receive coupling data
+      !!--------------------------------------------------------------------
+      INTEGER,                                                   INTENT(IN   ) :: kdomwrf     ! wrf domain index
+      CHARACTER(*),                                              INTENT(IN   ) :: cdsuffixu   ! u-field name suffix
+      CHARACTER(*),                                              INTENT(IN   ) :: cdsuffixv   ! v-field name suffix
+      INTEGER,                                                   INTENT(IN   ) :: ids,ide,jds,jde,kds,kde
+      INTEGER,                                                   INTENT(IN   ) :: ims,ime,jms,jme,kms,kme
+      INTEGER,                                                   INTENT(IN   ) :: ips,ipe,jps,jpe,kps,kpe
+      INTEGER,                                                   INTENT(IN   ) :: max_edom    ! max number of external model domains
+      REAL, DIMENSION( ims:ime, 1:max_edom, jms:jme ),           INTENT(IN   ) :: pcplmask    ! coupling mask
+      REAL, DIMENSION( ims:ime,             jms:jme ),           INTENT(  OUT) :: pdatacplu   ! coupling u-data
+      REAL, DIMENSION( ims:ime,             jms:jme ),           INTENT(  OUT) :: pdatacplv   ! coupling v-data
+      REAL, DIMENSION( ims:ime,             jms:jme ), OPTIONAL, INTENT(IN   ) :: cosa        ! Local cosine of map rotation
+      REAL, DIMENSION( ims:ime,             jms:jme ), OPTIONAL, INTENT(IN   ) :: sina        ! Local   sine of map rotation
+      REAL, DIMENSION( ims:ime,             jms:jme ), OPTIONAL, INTENT(IN   ) :: pdataobsu   ! observed u-data to be merged
+      REAL, DIMENSION( ims:ime,             jms:jme ), OPTIONAL, INTENT(IN   ) :: pdataobsv   ! observed v-data to be merged
+      !
+      INTEGER :: jext                                         ! external domain index
+      INTEGER :: ifldidu, ifldidv                             ! field index
+      REAL, DIMENSION( ips:ipe, jps:jpe ) :: zdatau, zdatav   ! data received from the coupler
+      LOGICAL :: lltorcv
+      !!--------------------------------------------------------------------
+
+      ifldidu = cpl_get_fldid( cdsuffixu )
+      ifldidv = cpl_get_fldid( cdsuffixv )
+
+      lltorcv = .false.
+      DO jext = 1, max_edom
+         lltorcv = lltorcv .OR. cpl_toreceive( kdomwrf, jext, ifldidu )
+      END DO
+      IF( .not.lltorcv ) return
+         
+      IF( PRESENT(pdataobsu) ) THEN
+         ! build mask for data = 1. - sum( cplmask of involved external model(s) for this specific variable ) 
+         pdatacplu(ips:ipe,jps:jpe) = 1.0
+         pdatacplv(ips:ipe,jps:jpe) = 1.0
+         DO jext = 1, max_edom
+            IF( cpl_toreceive( kdomwrf, jext, ifldidu ) ) THEN
+               pdatacplu(ips:ipe,jps:jpe) = pdatacplu(ips:ipe,jps:jpe) - pcplmask(ips:ipe,jext,jps:jpe)
+               pdatacplv(ips:ipe,jps:jpe) = pdatacplv(ips:ipe,jps:jpe) - pcplmask(ips:ipe,jext,jps:jpe)
+            END IF
+         END DO
+         pdatacplu(ips:ipe,jps:jpe) = pdataobsu(ips:ipe,jps:jpe) * pdatacplu(ips:ipe,jps:jpe)
+         pdatacplv(ips:ipe,jps:jpe) = pdataobsv(ips:ipe,jps:jpe) * pdatacplv(ips:ipe,jps:jpe)
+      ELSE 
+         pdatacplu(ips:ipe,jps:jpe) = 0.0
+         pdatacplv(ips:ipe,jps:jpe) = 0.0
+      END IF
+
+      DO jext = 1, max_edom
+         IF( cpl_toreceive( kdomwrf, jext, ifldidu ) ) THEN
+            IF( coupler_name == 'oasis' ) THEN
+               CALL cpl_oasis_rcv( kdomwrf, jext, ifldidu, nsecrun, zdatau )
+               CALL cpl_oasis_rcv( kdomwrf, jext, ifldidv, nsecrun, zdatav )
+            ENDIF
+            IF( PRESENT(cosa) ) THEN
+               pdatacplu(ips:ipe,jps:jpe) = pdatacplu(ips:ipe,jps:jpe) + pcplmask(ips:ipe,jext,jps:jpe)  &
+                  &        * ( zdatau(ips:ipe,jps:jpe) * cosa(ips:ipe,jps:jpe) + zdatav(ips:ipe,jps:jpe) * sina(ips:ipe,jps:jpe) )
+               pdatacplv(ips:ipe,jps:jpe) = pdatacplv(ips:ipe,jps:jpe) + pcplmask(ips:ipe,jext,jps:jpe)   &
+                  &        * ( zdatav(ips:ipe,jps:jpe) * cosa(ips:ipe,jps:jpe) - zdatau(ips:ipe,jps:jpe) * sina(ips:ipe,jps:jpe) )
+            ELSE
+               pdatacplu(ips:ipe,jps:jpe) = pdatacplu(ips:ipe,jps:jpe) + zdatau(ips:ipe,jps:jpe) * pcplmask(ips:ipe,jext,jps:jpe)
+               pdatacplv(ips:ipe,jps:jpe) = pdatacplv(ips:ipe,jps:jpe) + zdatav(ips:ipe,jps:jpe) * pcplmask(ips:ipe,jext,jps:jpe)
+            ENDIF
+         END IF
+      END DO
+
+   END SUBROUTINE cpl_rcv_vector
 
 
    SUBROUTINE cpl_store_input( grid, config_flags )
@@ -484,14 +785,38 @@ CONTAINS
       IF( ( config_flags%auxinput4_interval .NE. 0 .AND. config_flags%io_form_auxinput4 .NE. 0 .AND. grid%just_read_auxinput4 ) &
          .OR. grid%itimestep .EQ. 1 ) THEN
          
-         ! if we receive the SST, we need to store it in SST_INPUT
+         ! if we receive the SST, we need to store the SST that was read in auxinput4 in SST_INPUT
          llmust_store = .FALSE.
          DO jext = 1, grid%num_ext_model_couple_dom
             llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SST' ) )
          END DO
-         IF( llmust_store )   grid%sst_input(ips:ipe,jps:jpe) = grid%sst(ips:ipe,jps:jpe)   ! store SST into SST_INPUT 
+         IF( llmust_store ) grid%sst_input(     ips:ipe,jps:jpe) = grid%sst(     ips:ipe,jps:jpe)   ! store      SST into      SST_INPUT
+
+         llmust_store = .FALSE.
+         DO jext = 1, grid%num_ext_model_couple_dom
+            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_COVER' ) )
+         END DO
+         IF( llmust_store ) grid%xice_input(    ips:ipe,jps:jpe) = grid%xice(    ips:ipe,jps:jpe)   ! store     XICE into     XICE_INPUT
+            
+         llmust_store = .FALSE.
+         DO jext = 1, grid%num_ext_model_couple_dom
+            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_THICK' ) )
+         END DO
+         IF( llmust_store ) grid%icedepth_input(ips:ipe,jps:jpe) = grid%icedepth(ips:ipe,jps:jpe)   ! store ICEDEPTH into ICEDEPTH_INPUT
          
-         grid%just_read_auxinput4 = .FALSE.  ! the work as been done and not me done again until we reread data from AUXINPUT4
+         llmust_store = .FALSE.
+         DO jext = 1, grid%num_ext_model_couple_dom
+            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_SNOWDEPTH' ) )
+         END DO
+         IF( llmust_store ) grid%snowsi_input(  ips:ipe,jps:jpe) = grid%snowsi(  ips:ipe,jps:jpe)   ! store   SNOWSI into   SNOWSI_INPUT
+
+         llmust_store = .FALSE.
+         DO jext = 1, grid%num_ext_model_couple_dom
+            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_ALBEDO' ) )
+         END DO
+         IF( llmust_store ) grid%albsi_input(   ips:ipe,jps:jpe) = grid%albsi(   ips:ipe,jps:jpe)   ! store    ALBSI into    ALBSI_INPUT
+         
+         grid%just_read_auxinput4 = .FALSE.  ! the work as been done and must not be done again until we reread data from AUXINPUT4
       
       END IF
 #endif      
