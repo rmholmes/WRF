@@ -524,8 +524,7 @@ BENCH_START(surf_driver_tim)
      &        ,NDAY=grid%nday          ,TMN_UPDATE=grid%tmn_update      ,YR=yr            &
      &        ,TSLB=grid%tslb          ,T_PHY=t_phy        ,U10=grid%u10            &
      &        ,URATX=grid%uratx        ,VRATX=grid%vratx   ,TRATX=grid%tratx        &
-     &        ,UDRUNOFF=grid%udrunoff  ,UZ0=grid%uz0                                &
-     &        ,UST=grid%ust            ,UST_SEA=grid%ust_sea,UST_ICE=grid%ust_ice   &
+     &        ,UDRUNOFF=grid%udrunoff  ,UST=grid%ust       ,UZ0=grid%uz0            &
      &        ,U_FRAME=grid%u_frame    ,U_PHY=grid%u_phy   ,V10=grid%v10            &
      &        ,UOCE=grid%uoce          ,VOCE=grid%voce                              &
      &        ,VEGFRA=grid%vegfra      ,VZ0=grid%vz0       ,V_FRAME=grid%v_frame    &
@@ -535,8 +534,7 @@ BENCH_START(surf_driver_tim)
      &        ,Z0=grid%z0              ,Z=grid%z        ,ZNT=grid%znt               &
      &        ,ZS=grid%zs              ,ALBSI=grid%albsi , ICEDEPTH=grid%icedepth   &
      &        ,SNOWSI=grid%snowsi                                                   &
-     &        ,XICEM=grid%xicem       ,ISICE=grid%landuse_isice                     &
-     &        ,USTM=grid%ustm         ,USTM_SEA=grid%ustm_sea, USTM_ICE=grid%ustm_ice   &
+     &        ,XICEM=grid%xicem       ,ISICE=grid%landuse_isice, USTM=grid%ustm     &
      &        ,CK=grid%ck             ,CKA=grid%cka                                 &
      &        ,CD=grid%cd             ,CDA=grid%cda                                 &
      &        ,ISFTCFLX=config_flags%isftcflx, IZ0TLND=config_flags%iz0tlnd         &
@@ -844,7 +842,6 @@ BENCH_START(surf_driver_tim)
      &        ,RDLAI2D=config_flags%rdlai2d                               &
      &        ,usemonalb=config_flags%usemonalb                           &
      &        ,NOAHRES=grid%noahres                                       &
-     &        ,TSK_SAVE=grid%tsk_save                                     &
      &        ,ch=grid%ch,tsq=grid%tsq,qsq=grid%qsq,cov=grid%cov          & !MYNN - MP
      &        ,Sh3d=grid%sh3d,EL_PBL=grid%el_pbl                          & !JOE- MYNN cloudpdf
      &        ,bl_mynn_cloudpdf=config_flags%bl_mynn_cloudpdf             & !JOE- MYNN cloudpdf
@@ -886,6 +883,12 @@ BENCH_START(surf_driver_tim)
      &        ,spp_lsm=config_flags%spp_lsm,pattern_spp_lsm=grid%pattern_spp_lsm     & !SPP
      &        ,field_sf=grid%field_sf                                                & !SPP
      &        ,spp_pbl=config_flags%spp_pbl,pattern_spp_pbl=grid%pattern_spp_pbl     & !SPP
+     &        , UST_SEA= grid%UST_SEA,  UST_ICE= grid%UST_ICE                     &
+     &        ,USTM_SEA=grid%USTM_SEA, USTM_ICE=grid%USTM_ICE                     &
+     &        , HFX_SEA= grid%HFX_SEA,  HFX_ICE= grid%HFX_ICE                     &
+     &        , QFX_SEA= grid%QFX_SEA,  QFX_ICE= grid%QFX_ICE                     &
+     &        ,  LH_SEA=  grid%LH_SEA,   LH_ICE=  grid%LH_ICE                     &
+     &        , TSK_SEA= grid%TSK_SEA,  TSK_ICE= grid%TSK_ICE                     &
      &                                                           )
 
 #ifdef WRF_HYDRO

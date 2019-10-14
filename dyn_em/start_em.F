@@ -1161,7 +1161,10 @@ endif
               grid%SABGsubgrid,grid%NRAsubgrid,&
               grid%SWUPsubgrid,grid%lhsoi, &
               grid%lhveg, grid%lhtran, & !end of CLM variables
-                      grid%TSK_SAVE,                        & !Optional fractional seaice
+                      grid%UST_SEA,grid%UST_ICE,                         & !Optional fractional seaice
+                      grid%HFX_SEA,grid%HFX_ICE,                         & !Optional fractional seaice
+                      grid%QFX_SEA,grid%QFX_ICE,                         & !Optional fractional seaice
+                      grid%TSK_SEA,grid%TSK_ICE,                         & !Optional fractional seaice
                       grid%itimestep, grid%fdob,            &
                       t00, p00, a,                      & ! for obs_nudge base state
                       grid%TYR, grid%TYRA, grid%TDLY, grid%TLAG, grid%NYEAR, grid%NDAY,grid%tmn_update, &

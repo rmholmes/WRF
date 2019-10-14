@@ -271,14 +271,14 @@ CONTAINS
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(INOUT)               ::                HFX, &
                                                               QFX, &
-                                                         MOL,RMOL, &
+                                                              MOL, &
                                                              QSFC, &
                                                               ZNT, &
-                                                              ZOL, &
                                                               UST
 
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(OUT)                 ::             REGIME, &
+                                                             RMOL, &
                                                                LH, &
                                                               QGH, &
                                                               CPM, &
@@ -288,6 +288,7 @@ CONTAINS
                                                                CH, &
                                                         FLHC,FLQC, &
                                                    GZ1OZ0,WSPD,BR, &
+                                                              ZOL, &
                                                         PSIM,PSIH
 
 
@@ -517,13 +518,13 @@ CONTAINS
                                                           vt1,vq1
 
       REAL,     DIMENSION( ims:ime ), INTENT(INOUT) ::    HFX,QFX, &
-                                                         MOL,RMOL, &
+                                                              MOL, &
                                                              QSFC, &
                                                               ZNT, &
-                                                              ZOL, &
                                                               UST
 
       REAL,     DIMENSION( ims:ime ), INTENT(OUT) ::       REGIME, &
+                                                             RMOL, &
                                                                LH, &
                                                               QGH, &
                                                               CPM, &
@@ -533,6 +534,7 @@ CONTAINS
                                                            GZ1OZ0, &
                                                              WSPD, &
                                                                BR, &
+                                                              ZOL, &
                                                         PSIM,PSIH
 
       REAL,     DIMENSION( its:ite ), INTENT(IN)   ::     rstoch1D

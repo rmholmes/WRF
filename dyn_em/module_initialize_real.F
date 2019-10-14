@@ -2700,7 +2700,7 @@ integer::oops1,oops2
       DO j = jts, MIN(jte,jde-1)
          DO i = its, MIN(ite,ide-1)
             IF ( skip_middle_points_t ( ids , ide , jds , jde , i , j , em_width , hold_ups ) ) CYCLE
-            grid%tsk_save(i,j) = grid%tsk(i,j)
+            grid%tsk_ice(i,j) = grid%tsk(i,j)
          END DO
       END DO
 
@@ -3396,7 +3396,7 @@ integer::oops1,oops2
       CALL nl_get_seaice_threshold ( grid%id , grid%seaice_threshold )
       CALL nl_get_isice ( grid%id , grid%isice )
       CALL nl_get_iswater ( grid%id , grid%iswater )
-      CALL adjust_for_seaice_post ( grid%xice , grid%landmask , grid%tsk , grid%tsk_save , &
+      CALL adjust_for_seaice_post ( grid%xice , grid%landmask , grid%tsk , grid%tsk_ice , &
                                     grid%ivgtyp , grid%vegcat , grid%lu_index , &
                                     grid%xland , grid%landusef , grid%isltyp , grid%soilcat ,  &
                                     grid%soilctop , &

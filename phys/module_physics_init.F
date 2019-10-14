@@ -200,7 +200,10 @@ CONTAINS
                          Q2subgrid,SABVsubgrid,SABGsubgrid,NRAsubgrid,       &
                          SWUPsubgrid,lhsoi,lhveg,lhtran,                     &
 ! end of CLM variables
-                         TSK_SAVE,                               & !Optional for fractional seaice
+                         UST_SEA,UST_ICE,                               & !Optional for fractional seaice
+                         HFX_SEA,HFX_ICE,                               & !Optional for fractional seaice
+                         QFX_SEA,QFX_ICE,                               & !Optional for fractional seaice
+                         TSK_SEA,TSK_ICE,                               & !Optional for fractional seaice
                          itimestep,                              & !Optional obs fdda
 #if ( EM_CORE == 1 )
                          fdob,                                   & !Optional obs fdda
@@ -552,7 +555,7 @@ CONTAINS
              TML,T0ML,HML,H0ML,HUML,HVML,TMOML
 ! fractional seaice
    REAL,     DIMENSION( ims:ime , jms:jme ) , OPTIONAL, INTENT(INOUT) ::    &
-             TSK_SAVE
+             TSK_SEA,TSK_ICE,UST_SEA,UST_ICE,HFX_SEA,HFX_ICE,QFX_SEA,QFX_ICE
 !fdda
    REAL,     OPTIONAL, INTENT(IN) :: FGDT
    INTEGER , OPTIONAL, INTENT(OUT) :: STEPFG
@@ -1022,10 +1025,16 @@ CONTAINS
       GLW(i,j)=0.
 !-- initialize ust to a small value
       UST(i,j)=0.0001
+      UST_SEA(i,j)=0.0001
+      UST_ICE(i,j)=0.0001
       MOL(i,j)=0.0
       PBLH(i,j)=0.0
       HFX(i,j)=0.
+      HFX_SEA(i,j)=0.
+      HFX_ICE(i,j)=0.
       QFX(i,j)=0.
+      QFX_SEA(i,j)=0.
+      QFX_ICE(i,j)=0.
       RAINBL(i,j)=0.
       RAINNCV(i,j)=0.
       SNOWNCV(i,j)=0.
@@ -1356,10 +1365,10 @@ CONTAINS
                 ACHFX,ACLHF,ACGRDFLX,                           &
                 oml_hml0, sf_ocean_physics,                     & !Optional oml
                 TML,T0ML,HML,H0ML,HUML,HVML,TMOML,              & !Optional oml
-                is_CAMMGMP_used                                 &
-               ,TSK_SAVE                                        & !Optional fractional seaice
+                is_CAMMGMP_used,                                 &
+                TSK_SEA,TSK_ICE,                                        & !Optional fractional seaice
 ! CLM vraiables 
-               ,numc,nump,snl,                                      &
+                numc,nump,snl,                                      &
                 snowdp,wtc,wtp,h2osno,t_grnd,t_veg,         &
                 h2ocan,h2ocan_col,t2m_max,t2m_min,t_ref2m,          &
                 h2osoi_liq_s1,              &
@@ -2347,10 +2356,10 @@ CONTAINS
                 ACHFX,ACLHF,ACGRDFLX,                           &
                 oml_hml0, sf_ocean_physics,                     & !Optional oml
                 TML,T0ML,HML,H0ML,HUML,HVML,TMOML,              &
-                is_CAMMGMP_used                                 &
-               ,TSK_SAVE                                        & !Optional fractional seaice
+                is_CAMMGMP_used,                                 &
+                TSK_SEA,TSK_ICE,                                        & !Optional fractional seaice
 ! CLM vraiables 
-               ,numc,nump,snl,                                      &
+                numc,nump,snl,                                      &
                 snowdp,wtc,wtp,h2osno,t_grnd,t_veg,         &
                 h2ocan,h2ocan_col,t2m_max,t2m_min,t_ref2m,          &
                 h2osoi_liq_s1,              &
@@ -2740,7 +2749,7 @@ CONTAINS
    INTEGER,  OPTIONAL,  INTENT(IN) :: sf_ocean_physics
    REAL,  OPTIONAL,  INTENT(IN) :: oml_hml0
    REAL,  DIMENSION( ims:ime , jms:jme ) , OPTIONAL, INTENT(INOUT) ::    &
-                                        TSK_SAVE
+                                        TSK_SEA,TSK_ICE
    LOGICAL,  INTENT(IN) :: start_of_simulation
    INTEGER :: i,j
 
@@ -2840,11 +2849,12 @@ CONTAINS
    ENDIF
    ENDIF
 
-   IF(PRESENT(TSK_SAVE))THEN
+   IF(PRESENT(TSK_ICE))THEN
    IF(.NOT.restart .AND. config_flags%fractional_seaice.EQ.1)THEN
      DO j=jts,jte
      DO i=its,ite
-        TSK_SAVE(i,j)=TSK(i,j)
+        TSK_ICE(i,j)=TSK(i,j)
+        TSK_SEA(i,j)=TSK(i,j)
      ENDDO
      ENDDO
    ENDIF
