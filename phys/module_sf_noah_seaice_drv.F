@@ -12,7 +12,7 @@ contains
        &                  CHS, CHS2, CQS2,                                              &
        &                  RIB, ZNT, LH, HFX, QFX, POTEVP, GRDFLX, QSFC, ACSNOW,         &
        &                  ACSNOM, SNOPCX, SFCRUNOFF, NOAHRES,                           &
-       &                  SF_URBAN_PHYSICS, B_T_BEP, B_Q_BEP, RHO,                      &
+       &                  SF_URBAN_PHYSICS, B_T_BEP, B_Q_BEP, RHO, DQDTICE,             &
        &                  IDS, IDE, JDS, JDE, KDS, KDE,                                 &
        &                  IMS, IME, JMS, JME, KMS, KME,                                 &
        &                  ITS, ITE, JTS, JTE, KTS, KTE  )
@@ -21,6 +21,7 @@ contains
     USE module_state_description, ONLY : BEPSCHEME
     USE module_state_description, ONLY : BEP_BEMSCHEME
 #endif
+    USE module_model_constants  , ONLY : stbolt
     implicit none
 
     INTEGER, INTENT(IN)       ::               SEAICE_ALBEDO_OPT
@@ -117,6 +118,10 @@ contains
     REAL,    DIMENSION( ims:ime, kms:kme, jms:jme )            , &
          &   INTENT (IN)      ::                            RHO
 
+    REAL,    DIMENSION( ims:ime, jms:jme )                      ,&
+         &   INTENT(OUT)      ::                        DQDTICE
+
+
     INTEGER :: I
     INTEGER :: J
     REAL    :: FFROZP
@@ -149,7 +154,9 @@ contains
 
     REAL    :: Z0
     REAL    :: ETA
+    REAL    :: DETADT
     REAL    :: SHEAT
+    REAL    :: DSHEATDT
     REAL    :: ETA_KINEMATIC
     REAL    :: FDOWN
     REAL    :: DEW
@@ -200,6 +207,7 @@ contains
               IF ( SEAICE_SNOWDEPTH_OPT == 1 ) THEN
                   SNOWSI(I,J) = 0.0
               ENDIF
+              DQDTICE(I,J) = -20.
               CYCLE SEAICE_ILOOP
           ENDIF
 
@@ -210,6 +218,7 @@ contains
           CASE (0)
               ! Use uniform sea-ice thickness.
               SITHICK = SEAICE_THICKNESS_DEFAULT
+              ICEDEPTH(I,J) = SITHICK
           CASE (1)
               ! Use the sea-ice as read in from the input files.
               ! Limit the to between 0.10 and 10.0 m.
@@ -404,7 +413,7 @@ contains
                &           SNOALB, TBOT, Z0BRD, Z0, EMISSI,                 &    !S
                &           T1, STC, SNOWH, SNEQV, ALBEDOK, CH,              &    !H
                &           ALBEDOSI, SNOWONSI,                              &
-               &           ETA, SHEAT, ETA_KINEMATIC, FDOWN,                &    !O
+               &           ETA, DETADT, SHEAT, DSHEATDT, ETA_KINEMATIC, FDOWN,       &    !O
                &           ESNOW(I,J), DEW, ETP, SSOIL, FLX1, FLX2, FLX3,   &    !O
                &           SNOMLT, SNCOVR,                                  &    !O
                &           RUNOFF1, Q1, RIBB)
@@ -416,6 +425,7 @@ contains
           Z02D(I,J)    = Z0BRD
           SNOWH2D(I,J) = SNOWH
           SNOWC(I,J)   = SNCOVR
+          DQDTICE(I,J) = DETADT + DSHEATDT + 4. * STBOLT * T1 * T1 * T1
 
           ! Convert snow water equivalent from (m) back to (mm)
           SNOW(I,J)    = SNEQV * 1000.

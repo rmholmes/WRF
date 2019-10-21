@@ -92,24 +92,25 @@ CONTAINS
             sndname(jwrf,jext, 2) = clprefix//'SOLID_PRECIP'         ! send total solid precipitation (kg/m2/s = mm/s)
             sndname(jwrf,jext, 3) = clprefix//'EVAP-PRECIP'          ! send net fresh water budget: evaporation - total precipitation
             sndname(jwrf,jext, 4) = clprefix//'SUBLIMATION'          ! send Sublimation over sea-ice           
-            ! heat fluxes
+            ! heat fluxes (positive downward)
             sndname(jwrf,jext, 5) = clprefix//'SURF_NET_SOLAR'       ! send net short wave flux at ground surface
             sndname(jwrf,jext, 6) = clprefix//'SURF_NET_NON-SOLAR'   ! send net non-solar heat flux at ground surface
-            sndname(jwrf,jext, 7) = clprefix//'SURF_NET_NON-SOLAR_ICE'   ! send net non-solar heat flux at atmosphere-sea-ice interface
+            sndname(jwrf,jext, 7) = clprefix//'SURF_NET_NON-SOLAR_ICE'  ! send net non-solar heat flux at atmosphere-sea-ice interface
+            sndname(jwrf,jext, 8) = clprefix//'DQNON-SOLAR_DTEMP_ICE'   ! send net temperature derivative of non-solar heat flux at atmosphere-sea-ice interface
             ! momentum fluxes
-            sndname(jwrf,jext, 8) = clprefix//'TAUX'           ! send zonal      wind tress at atmosphere-ocean/sea-ice interface
-            sndname(jwrf,jext, 9) = clprefix//'TAUY'           ! send meridional wind tress at atmosphere-ocean/sea-ice interface
-            sndname(jwrf,jext,10) = clprefix//'TAUE'           ! send Eastward   wind tress at atmosphere-ocean/sea-ice interface
-            sndname(jwrf,jext,11) = clprefix//'TAUN'           ! send Northward  wind tress at atmosphere-ocean/sea-ice interface
-            sndname(jwrf,jext,12) = clprefix//'TAUX_OCE'       ! send zonal      wind tress at atmosphere-free-ocean interface
-            sndname(jwrf,jext,13) = clprefix//'TAUY_OCE'       ! send meridional wind tress at atmosphere-free-ocean interface
-            sndname(jwrf,jext,14) = clprefix//'TAUE_OCE'       ! send Eastward   wind tress at atmosphere-free-ocean interface
-            sndname(jwrf,jext,15) = clprefix//'TAUN_OCE'       ! send Northward  wind tress at atmosphere-free-ocean interface
-            sndname(jwrf,jext,16) = clprefix//'TAUX_ICE'       ! send zonal      wind tress at atmosphere-sea-ice interface
-            sndname(jwrf,jext,17) = clprefix//'TAUY_ICE'       ! send meridional wind tress at atmosphere-sea-ice interface
-            sndname(jwrf,jext,18) = clprefix//'TAUE_ICE'       ! send Eastward   wind tress at atmosphere-sea-ice interface
-            sndname(jwrf,jext,19) = clprefix//'TAUN_ICE'       ! send Northward  wind tress at atmosphere-sea-ice interface
-            sndname(jwrf,jext,20) = clprefix//'TAUMOD'         ! send the wind tress module at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext, 9) = clprefix//'TAUX'           ! send zonal      wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,10) = clprefix//'TAUY'           ! send meridional wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,11) = clprefix//'TAUE'           ! send Eastward   wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,12) = clprefix//'TAUN'           ! send Northward  wind tress at atmosphere-ocean/sea-ice interface
+            sndname(jwrf,jext,13) = clprefix//'TAUX_OCE'       ! send zonal      wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,14) = clprefix//'TAUY_OCE'       ! send meridional wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,15) = clprefix//'TAUE_OCE'       ! send Eastward   wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,16) = clprefix//'TAUN_OCE'       ! send Northward  wind tress at atmosphere-free-ocean interface
+            sndname(jwrf,jext,17) = clprefix//'TAUX_ICE'       ! send zonal      wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,18) = clprefix//'TAUY_ICE'       ! send meridional wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,19) = clprefix//'TAUE_ICE'       ! send Eastward   wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,20) = clprefix//'TAUN_ICE'       ! send Northward  wind tress at atmosphere-sea-ice interface
+            sndname(jwrf,jext,21) = clprefix//'TAUMOD'         ! send the wind tress module at atmosphere-ocean/sea-ice interface
          END DO
       END DO
       
@@ -396,7 +397,7 @@ CONTAINS
       ifldid      = cpl_get_fldid( 'SUBLIMATION' )
       lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
       IF ( COUNT(lltosend) > 0 ) THEN 
-         CALL cpl_sndfield( grid%id, lltosend, ifldid, grid%QFX_ICE(ips:ipe,jps:jpe) )
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, grid%ESNOW(ips:ipe,jps:jpe) )   ! ESNOW is the positive part of QFX_ICE
       END IF
 
       !
@@ -439,6 +440,14 @@ CONTAINS
          cplsnd(ips:ipe,jps:jpe) = - STBOLT * grid%EMISS(ips:ipe,jps:jpe) * grid%TSK_ICE(ips:ipe,jps:jpe)**4  &
             &                      + grid%GLW(ips:ipe,jps:jpe) - grid%LH_ICE(ips:ipe,jps:jpe) - grid%HFX_ICE(ips:ipe,jps:jpe) 
          CALL cpl_sndfield( grid%id, lltosend, ifldid, cplsnd )
+      END IF
+      !
+      ! DQNON-SOLAR_DTEMP_ICE : temperature derivative of non-solar heat flux at atmosphere-sea-ice interface (W.m-2.K-1, positive downward)
+      !--------------------------------------------------------------------------------------------------
+      ifldid      = cpl_get_fldid( 'DQNON-SOLAR_DTEMP_ICE' )
+      lltosend(:) = cpl_tosend( grid%id, ifldid, max_edom )
+      IF ( COUNT(lltosend) > 0 ) THEN 
+         CALL cpl_sndfield( grid%id, lltosend, ifldid, - grid%DQDTICE(ips:ipe,jps:jpe) )
       END IF
 
       !
@@ -790,31 +799,37 @@ CONTAINS
          DO jext = 1, grid%num_ext_model_couple_dom
             llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SST' ) )
          END DO
-         IF( llmust_store ) grid%sst_input(     ips:ipe,jps:jpe) = grid%sst(     ips:ipe,jps:jpe)   ! store      SST into      SST_INPUT
+         IF( llmust_store ) grid%sst_input(ips:ipe,jps:jpe) = grid%sst(ips:ipe,jps:jpe)   ! store      SST into      SST_INPUT
 
          llmust_store = .FALSE.
          DO jext = 1, grid%num_ext_model_couple_dom
             llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_COVER' ) )
          END DO
-         IF( llmust_store ) grid%xice_input(    ips:ipe,jps:jpe) = grid%xice(    ips:ipe,jps:jpe)   ! store     XICE into     XICE_INPUT
-            
-         llmust_store = .FALSE.
-         DO jext = 1, grid%num_ext_model_couple_dom
-            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_THICK' ) )
-         END DO
-         IF( llmust_store ) grid%icedepth_input(ips:ipe,jps:jpe) = grid%icedepth(ips:ipe,jps:jpe)   ! store ICEDEPTH into ICEDEPTH_INPUT
+         IF( llmust_store ) grid%xice_input(ips:ipe,jps:jpe) = grid%xice(ips:ipe,jps:jpe)   ! store     XICE into     XICE_INPUT
+   
+!        IF( config_flags%seaice_thickness_opt == 1 ) THEN
+            llmust_store = .FALSE.
+            DO jext = 1, grid%num_ext_model_couple_dom
+               llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_THICK' ) )
+            END DO
+            IF( llmust_store ) grid%icedepth_input(ips:ipe,jps:jpe) = grid%icedepth(ips:ipe,jps:jpe)   ! store ICEDEPTH into ICEDEPTH_INPUT
+!         ENDIF
          
-         llmust_store = .FALSE.
-         DO jext = 1, grid%num_ext_model_couple_dom
-            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_SNOWDEPTH' ) )
-         END DO
-         IF( llmust_store ) grid%snowsi_input(  ips:ipe,jps:jpe) = grid%snowsi(  ips:ipe,jps:jpe)   ! store   SNOWSI into   SNOWSI_INPUT
-
-         llmust_store = .FALSE.
-         DO jext = 1, grid%num_ext_model_couple_dom
-            llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_ALBEDO' ) )
-         END DO
-         IF( llmust_store ) grid%albsi_input(   ips:ipe,jps:jpe) = grid%albsi(   ips:ipe,jps:jpe)   ! store    ALBSI into    ALBSI_INPUT
+!         IF( config_flags%seaice_snowdepth_opt == 1 ) THEN
+            llmust_store = .FALSE.
+            DO jext = 1, grid%num_ext_model_couple_dom
+               llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_SNOWDEPTH' ) )
+            END DO
+            IF( llmust_store ) grid%snowsi_input(ips:ipe,jps:jpe) = grid%snowsi(ips:ipe,jps:jpe)   ! store   SNOWSI into   SNOWSI_INPUT
+!         ENDIF
+         
+!         IF( config_flags%seaice_albedo_opt == 2 ) THEN
+            llmust_store = .FALSE.
+            DO jext = 1, grid%num_ext_model_couple_dom
+               llmust_store = llmust_store .OR. cpl_toreceive( grid%id, jext, cpl_get_fldid( 'SEAICE_ALBEDO' ) )
+            END DO
+            IF( llmust_store ) grid%albsi_input(ips:ipe,jps:jpe) = grid%albsi(ips:ipe,jps:jpe)   ! store    ALBSI into    ALBSI_INPUT
+!         ENDIF
          
          grid%just_read_auxinput4 = .FALSE.  ! the work as been done and must not be done again until we reread data from AUXINPUT4
       

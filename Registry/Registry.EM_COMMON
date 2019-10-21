@@ -1807,6 +1807,7 @@ state    real  QFX_ICE          ij      misc        1         -      rh       "Q
 state    real  LH               ij      misc        1         -      rh       "LH"                    "LATENT HEAT FLUX AT THE SURFACE"                       "W m-2"
 state    real  LH_SEA           ij      misc        1         -      rh       "LH_SEA"                "LATENT HEAT FLUX AT THE SURFACE OVER FREE OCEAN"       "W m-2"
 state    real  LH_ICE           ij      misc        1         -      rh       "LH_ICE"                "LATENT HEAT FLUX AT THE SURFACE OVER SEA-ICE"          "W m-2"
+state    real  DQDTICE          ij      misc        1         -      rh       "DQDTICE"               "TEMPERATURE DERIVATIVE OF HEAT FLUX OVER ICE "          "W m-2 K-1"
 state    real  ACHFX            ij      misc        1         -      rhdu     "ACHFX"                 "ACCUMULATED UPWARD HEAT FLUX AT THE SURFACE"  "J m-2"
 #BSINGH - Added WSTAR for CuP scheme
 state    real  WSTAR            ij      misc        1         -      -        "WSTAR"                 "DEARDORFF CONVECTIVE VELOCITY SCALE"          "m s-1"      

@@ -889,7 +889,7 @@ BENCH_START(surf_driver_tim)
      &        , QFX_SEA= grid%QFX_SEA,  QFX_ICE= grid%QFX_ICE                     &
      &        ,  LH_SEA=  grid%LH_SEA,   LH_ICE=  grid%LH_ICE                     &
      &        , TSK_SEA= grid%TSK_SEA,  TSK_ICE= grid%TSK_ICE                     &
-     &        , COSA = grid%COSA     , SINA = grid%SINA                           &
+     &        , DQDTICE = grid%DQDTICE, COSA = grid%COSA     , SINA = grid%SINA          &
      &        , XICE_INPUT   = grid%XICE_INPUT  , ICEDEPTH_INPUT = grid%ICEDEPTH_INPUT   &
      &        , SNOWSI_INPUT = grid%SNOWSI_INPUT, ALBSI_INPUT    = grid%ALBSI_INPUT      &
      &                                                           )

@@ -31,7 +31,7 @@ CONTAINS
        &                  SNOALB,TBOT, Z0BRD, Z0, EMISSI,                  &    !S
        &                  T1,STC,SNOWH,SNEQV,ALBEDO, CH,                   &    !H
        &                  ALBEDOSI, SNOWONSI,                              &
-       &                  ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
+       &                  ETA,DETADT,SHEAT,DSHEATDT,ETA_KINEMATIC,FDOWN,   &    !O
        &                  ESNOW,DEW,ETP,SSOIL,FLX1,FLX2,FLX3,              &    !O
        &                  SNOMLT,SNCOVR,                                   &    !O
        &                  RUNOFF1,Q1,RIBB)
@@ -108,11 +108,11 @@ CONTAINS
 ! OUTPUT VARIABLES NECESSARY FOR A COUPLED NWP MODEL.  FOR THIS APPLICATION,
 ! THE REMAINING OUTPUT/DIAGNOSTIC/PARAMETER BLOCKS BELOW ARE NOT
 ! NECESSARY.  OTHER APPLICATIONS MAY REQUIRE DIFFERENT OUTPUT VARIABLES.
-!   ETA        ACTUAL LATENT HEAT FLUX (W m-2: NEGATIVE, IF UP FROM
-!              SURFACE)
+!   ETA        ACTUAL LATENT HEAT FLUX (W m-2: NEGATIVE, IF UP FROM SURFACE)
+!   DETADT     ACTUAL LATENT HEAT FLUX  sensitivity(W m-2 K-1: NEGATIVE, IF UP FROM SURFACE)
 !  ETA_KINEMATIC actual latent heat flux in Kg m-2 s-1
-!   SHEAT      SENSIBLE HEAT FLUX (W M-2: NEGATIVE, IF UPWARD FROM
-!              SURFACE)
+!   SHEAT      SENSIBLE HEAT FLUX (W M-2: POSITIVE, IF UPWARD FROM SURFACE)
+!   DSHEATDT   SENSIBLE HEAT FLUX sensitivity (W M-2 K-1: POSITIVE, IF UPWARD FROM SURFACE)
 !   FDOWN      Radiation forcing at the surface (W m-2) = SOLDN*(1-alb)+LWDN
 ! ----------------------------------------------------------------------
 !   ESNOW      SUBLIMATION FROM (OR DEPOSITION TO IF <0) SNOWPACK (kg m-2 s-1)
@@ -166,8 +166,8 @@ CONTAINS
       REAL, DIMENSION(1:NSOIL), INTENT(INOUT) ::  STC
       REAL,DIMENSION(1:NSOIL)::   ZSOIL
 
-      REAL,INTENT(OUT)   :: ETA_KINEMATIC,DEW,ESNOW,ETA,                    &
-                            ETP,FLX1,FLX2,FLX3,SHEAT,RUNOFF1,               &
+      REAL,INTENT(OUT)   :: ETA_KINEMATIC,DEW,ESNOW,ETA,DETADT,                      &
+                            ETP,FLX1,FLX2,FLX3,SHEAT,DSHEATDT,RUNOFF1,               &
                             SSOIL,                                          &
                             SNOMLT,                                         &
                             FDOWN,Q1,Z0
@@ -354,6 +354,8 @@ CONTAINS
 
       CASE ( 1 ) ! Arctic sea-ice albedo from Mills (2011)
 
+         SNCOVR = 1.0
+         EMISSI = 0.98
          !
          ! Make albedo of snow on sea-ice a function of skin temperature:
          !
@@ -459,7 +461,7 @@ CONTAINS
 
       CALL PENMAN (SFCTMP,SFCPRS,CH,TH2,PRCP,FDOWN,T24,SSOIL,     &
            Q2,Q2SAT,ETP,RCH,RR,SNOWNG,FRZGRA,                     &
-           DQSDT2,FLX2,EMISSI,T1)
+           DQSDT2,FLX2,EMISSI,T1,DETADT)
 
       ESNOW = 0.0
       CALL SNOPAC (ETP,ETA,PRCP,SNOWNG,                    &
@@ -499,7 +501,9 @@ CONTAINS
 ! DETERMINE SENSIBLE HEAT (H) IN ENERGY UNITS (W M-2)
 ! ----------------------------------------------------------------------
 
-      SHEAT = - (CH * CP * SFCPRS)/ (R * T2V) * ( TH2- T1 )
+!!$      SHEAT = - (CH * CP * SFCPRS)/ (R * T2V) * ( TH2- T1 )
+      DSHEATDT = (CH * CP * SFCPRS)/ (R * T2V) 
+      SHEAT = DSHEATDT * ( T1 - TH2 )
 
 ! ----------------------------------------------------------------------
 ! CONVERT EVAP TERMS FROM KINEMATIC (KG M-2 S-1) TO ENERGY UNITS (W M-2)
@@ -696,7 +700,7 @@ CONTAINS
 
   SUBROUTINE PENMAN (SFCTMP,SFCPRS,CH,TH2,PRCP,FDOWN,T24,SSOIL, &
        &             Q2,Q2SAT,ETP,RCH,RR,SNOWNG,FRZGRA,       &
-       &             DQSDT2,FLX2,EMISSI,T1)
+       &             DQSDT2,FLX2,EMISSI,T1,DETADT)
 
 ! ----------------------------------------------------------------------
 ! CALCULATE POTENTIAL EVAPORATION FOR THE CURRENT POINT.  VARIOUS
@@ -710,7 +714,7 @@ CONTAINS
          &                     Q2, Q2SAT, SSOIL, SFCPRS, SFCTMP,  &
          &                     TH2,EMISSI
     REAL, INTENT(IN)        :: T1, T24, RCH
-    REAL, INTENT(OUT)       :: ETP,FLX2,RR
+    REAL, INTENT(OUT)       :: ETP,FLX2,RR,DETADT
     REAL                    :: ELCP1, LVS, EPSCA, A, DELTA, FNET, RAD
 
     REAL, PARAMETER      :: ELCP = 2.4888E+3, LSUBC = 2.501000E+6,CP = 1004.6
@@ -764,6 +768,15 @@ CONTAINS
     A = ELCP1 * (Q2SAT - Q2)
     EPSCA = (A * RR + RAD * DELTA) / (DELTA + RR)
     ETP = EPSCA * RCH / LVS
+
+! ----------------------------------------------------------------------
+! d(Latent heat) / d(Temperature) :
+! LH = ETA = ETP * LVS = EPSCA * RCH
+! We asssume RR >> DELTA so EPSCA ~ A = ELCP1 * (Q2SAT - Q2)
+! -> LH = RCH * ELCP1 * (Q2SAT - Q2)
+! -> d(LH)/dt = RCH * ELCP1 * d(Q2SAT)/dt = RCH * ELCP1 * DQSDT2
+! ----------------------------------------------------------------------
+    DETADT = RCH * ELCP1 * DQSDT2
 
 ! ----------------------------------------------------------------------
   END SUBROUTINE PENMAN

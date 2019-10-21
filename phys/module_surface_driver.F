@@ -293,7 +293,7 @@ CONTAINS
      &          ,ust_sea,ust_ice,ustm_sea,ustm_ice                    &
      &          ,hfx_sea,hfx_ice,qfx_sea,qfx_ice                      &
      &          ,lh_sea,lh_ice,tsk_sea,tsk_ice                        &
-     &          ,cosa,sina                                            &
+     &          ,dqdtice,cosa,sina                                    &
      &          ,xice_input,icedepth_input,snowsi_input,albsi_input   &
      &                                                             )
 
@@ -1310,6 +1310,7 @@ CONTAINS
 !-------------------------------------------------
 ! coupling variables
 !-------------------------------------------------
+   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(  OUT)::   DQDTICE
    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN   )::   COSA, SINA
    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN   )::   XICE_INPUT, ICEDEPTH_INPUT, SNOWSI_INPUT, ALBSI_INPUT
    
@@ -2810,7 +2811,7 @@ CONTAINS
               &            chs, chs2, cqs2,                                            &
               &            br, znt, lh, hfx, qfx, potevp, grdflx, qsfc, acsnow,        &
               &            acsnom, snopcx, sfcrunoff, noahres,                         &
-              &            sf_urban_physics, b_t_bep, b_q_bep, rho,                    &
+              &            sf_urban_physics, b_t_bep, b_q_bep, rho, dqdtice,           &
               &            ids,ide, jds,jde, kds,kde,                                  &
               &            ims,ime, jms,jme, kms,kme,                                  &
               &            i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte )
@@ -2836,7 +2837,7 @@ CONTAINS
                         ! save variables for coupling
                         hfx_ice(i,j) = hfx(i,j)
                         qfx_ice(i,j) = qfx(i,j)
-                        lh_ice( i,j) = lh(i,j)
+                        lh_ice( i,j) = MAX(0., lh(i,j))
                         tsk_ice(i,j) = tsk(i,j)
                         !  Weighted average of fields between ice-cover values and open-water values.
                         flhc(i,j) = ( flhc(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * flhc_sea(i,j) )
@@ -3135,7 +3136,7 @@ CONTAINS
               &            chs, chs2, cqs2,                                            &
               &            br, znt, lh, hfx, qfx, potevp, grdflx, qsfc, acsnow,        &
               &            acsnom, snopcx, sfcrunoff, noahres,                         &
-              &            sf_urban_physics, b_t_bep, b_q_bep, rho,                    &
+              &            sf_urban_physics, b_t_bep, b_q_bep, rho, dqdtice,           &
               &            ids,ide, jds,jde, kds,kde,                                  &
               &            ims,ime, jms,jme, kms,kme,                                  &
               &            i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte )
