@@ -207,7 +207,7 @@ CONTAINS
 ! ----------------------------------------------------------------------
 
       DO KZ = 1,NSOIL
-         ZSOIL (KZ) = -SITHICK * FLOAT (KZ) / FLOAT (NSOIL)
+         ZSOIL (KZ) = -SITHICK * FLOAT (KZ) / FLOAT (NSOIL)   ! 1/N, 2/N, ... 1
       END DO
 
 ! ----------------------------------------------------------------------
@@ -401,30 +401,30 @@ CONTAINS
 ! ----------------------------------------------------------------------
 ! THERMAL CONDUCTIVITY FOR SEA-ICE CASE
 ! ----------------------------------------------------------------------
-      DF1 = 2.2
+      DF1 = 2.2                      ! sea-ice conductivity
 
-      DSOIL = - (0.5 * ZSOIL (1))
+      DSOIL = - (0.5 * ZSOIL (1))    ! thickness of half of the 1st layer (-> depend of NSOIL)
 
-      DTOT = SNOWH + DSOIL
-      FRCSNO = SNOWH / DTOT
+      DTOT = SNOWH + DSOIL           ! total thickness = snow thickness + half of the 1st ice layer thickness
+      FRCSNO = SNOWH / DTOT          ! fraction of snow thickness
 
 ! 1. HARMONIC MEAN (SERIES FLOW)
 !        DF1 = (SNCOND*DF1)/(FRCSOI*SNCOND+FRCSNO*DF1)
-      FRCSOI = DSOIL / DTOT
+      FRCSOI = DSOIL / DTOT          ! fraction of half of the 1st ice layer thickness
 ! 2. ARITHMETIC MEAN (PARALLEL FLOW)
 !        DF1 = FRCSNO*SNCOND + FRCSOI*DF1
 
 ! 3. GEOMETRIC MEAN (INTERMEDIATE BETWEEN HARMONIC AND ARITHMETIC MEAN)
 !        DF1 = (SNCOND**FRCSNO)*(DF1**FRCSOI)
 ! weigh DF by snow fraction
-      DF1A = FRCSNO * SNCOND + FRCSOI * DF1
+      DF1A = FRCSNO * SNCOND + FRCSOI * DF1  ! snow-sea-ice conductivity
 
 ! ----------------------------------------------------------------------
 ! CALCULATE SUBSURFACE HEAT FLUX, SSOIL, FROM FINAL THERMAL DIFFUSIVITY
 ! OF SURFACE MEDIUMS, DF1 ABOVE, AND SKIN TEMPERATURE AND TOP
 ! MID-LAYER SOIL TEMPERATURE
 ! ----------------------------------------------------------------------
-      DF1 = DF1A * SNCOVR + DF1 * ( 1.0 - SNCOVR )
+      DF1 = DF1A * SNCOVR + DF1 * ( 1.0 - SNCOVR )  ! merge snow-sea-ice and sea-ice conductivity
       
       SSOIL = DF1 * ( T1 - STC(1) ) / DTOT
 
