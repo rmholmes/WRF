@@ -67,6 +67,7 @@ contains
          &                                               RAINBL, &
          &                                             SNOALB2D, &
          &                                                 XICE, &
+         &                                                ALBSI, &
          &                                                  RIB
 
     LOGICAL, INTENT (IN)      :: FRPCPN
@@ -80,12 +81,11 @@ contains
     REAL,    DIMENSION( ims:ime, jms:jme )                     , &
          &   INTENT (INOUT)   ::                          EMISS, &
          &                                               ALBEDO, &
-         &                                                ALBSI, &
-         &                                                 Z02D, &
-         &                                                 SNOW, &
+         &                                                 Z02D, &  !++ z0 used by some surf layer
+         &                                                 SNOW, &  !++
          &                                                  TSK, &
-         &                                                SNOWC, &
-         &                                              SNOWH2D, &
+         &                                                SNOWC, &  !++
+         &                                              SNOWH2D, &  !++
          &                                                  CHS, &
          &                                                 CQS2
 
@@ -94,15 +94,15 @@ contains
          &                                                   LH, &
          &                                                  QFX, &
          &                                                  ZNT, &
-         &                                               POTEVP, &
-         &                                               GRDFLX, &
+         &                                               POTEVP, &  ! lsm only
+         &                                               GRDFLX, &  ! surface phy only
          &                                                 QSFC, &
-         &                                               ACSNOW, &
-         &                                               ACSNOM, &
-         &                                               SNOPCX, &
-         &                                            SFCRUNOFF, &
-         &                                              NOAHRES, &
-         &                                                ESNOW, &
+         &                                               ACSNOW, &  !++
+         &                                               ACSNOM, &  !++
+         &                                               SNOPCX, &  !++
+         &                                            SFCRUNOFF, &  !++
+         &                                              NOAHRES, &  !++
+         &                                                ESNOW, &  !++
          &                                                 CHS2
 
     REAL,    DIMENSION( ims:ime, jms:jme )                      ,&
