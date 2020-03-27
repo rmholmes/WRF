@@ -207,7 +207,7 @@ contains
               IF ( SEAICE_SNOWDEPTH_OPT == 1 ) THEN
                   SNOWSI(I,J) = 0.0
               ENDIF
-              DQDTICE(I,J) = -20.
+              DQDTICE(I,J) = 40.   ! DQDTICE is > 0. -DQDTICE is sent in module_cpl
               CYCLE SEAICE_ILOOP
           ENDIF
 
@@ -425,7 +425,7 @@ contains
           Z02D(I,J)    = Z0BRD
           SNOWH2D(I,J) = SNOWH
           SNOWC(I,J)   = SNCOVR
-          DQDTICE(I,J) = DETADT + DSHEATDT + 4. * STBOLT * T1 * T1 * T1
+          DQDTICE(I,J) = DETADT + DSHEATDT + 4. * STBOLT * T1 * T1 * T1  ! DQDTICE is > 0. -DQDTICE is sent in module_cpl
 
           ! Convert snow water equivalent from (m) back to (mm)
           SNOW(I,J)    = SNEQV * 1000.
