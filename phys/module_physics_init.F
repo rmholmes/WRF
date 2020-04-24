@@ -66,7 +66,7 @@ CONTAINS
                          XLAT,XLONG,xlong_u,xlat_v,ALBEDO,ALBBCK,GMT,JULYR,JULDAY,&
                          levsiz, n_ozmixm, n_aerosolc, paerlev,  &
                          alevsiz, no_src_types,                  &
-                         TMN,XLAND,ZNT,Z0,UST,MOL,PBLH,TKE_PBL,  &
+                         TMN,XLAND,ZNT,ZNT_SEA,ZNT_ICE,Z0,UST,MOL,PBLH,TKE_PBL,  &
                          EXCH_H,THC,SNOWC,MAVAIL,HFX,QFX,RAINBL, &
                          TSLB,ZS,DZS,num_soil_layers,warm_rain,  &
                          adv_moist_cond,is_CAMMGMP_used,         &
@@ -468,7 +468,7 @@ CONTAINS
              cugd_tten,cugd_ttens,cugd_qvten,                &
              cugd_qvtens,cugd_qcten
    REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::         &
-             XLAND,ZNT,Z0,UST,MOL,LU_INDEX,                         &
+             XLAND,ZNT,ZNT_SEA,ZNT_ICE,Z0,UST,MOL,LU_INDEX,                         &
              PBLH,THC,MAVAIL,HFX,QFX,RAINBL
    INTEGER , INTENT(INOUT)  :: landuse_ISICE, landuse_LUCATS
    INTEGER , INTENT(INOUT)  :: landuse_LUSEAS, landuse_ISN
@@ -1145,6 +1145,8 @@ CONTAINS
 #endif
        MAVAIL(i,j)=1.0
      ENDIF
+     ZNT_SEA(i,j)=ZNT(i,j)
+     ZNT_ICE(i,j)=ZNT(i,j)
 
    ENDDO
    ENDDO

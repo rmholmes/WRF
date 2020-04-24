@@ -32,7 +32,7 @@ CONTAINS
      &          ,tyr,tyra,tdly,tlag,lagday,nyear,nday,tmn_update,yr   &
      &          ,t_phy,u10,udrunoff,ust,uz0                           &
      &          ,u_frame,u_phy,v10,vegfra,u10e,v10e,uoce,voce         &
-     &          ,vz0,v_frame,v_phy,warm_rain,wspd,xice,xland,z,znt    &
+     &          ,vz0,v_frame,v_phy,warm_rain,wspd,xice,xland,z,znt,znt_sea,znt_ice    &
      &          ,max_edom,cplmask                                     &
 #if (HWRF==1)
      &          ,mznt                                                 &
@@ -721,7 +721,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   UZ0
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   VZ0
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   WSPD
-   REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   ZNT
+   REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   ZNT, ZNT_SEA, ZNT_ICE
 #if (HWRF==1)
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   MZNT
 #endif
@@ -1326,7 +1326,6 @@ CONTAINS
 !------------------------------------------------------------------
 !
      REAL, DIMENSION( ims:ime, jms:jme ) :: QSFC_SEA
-     REAL, DIMENSION( ims:ime, jms:jme ) :: ZNT_SEA
 
      REAL, DIMENSION( ims:ime, jms:jme ) :: CHS_SEA
      REAL, DIMENSION( ims:ime, jms:jme ) :: CHS2_SEA
@@ -1438,19 +1437,30 @@ CONTAINS
      xice_threshold = 0.02
   endif
 
-  if ( ( seaice_albedo_opt == 2 ) .and. ( ifndalbsi == 0 ) ) then
-      call wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
-  endif
+!!$  if ( ( seaice_albedo_opt == 2 ) .and. ( ifndalbsi == 0 ) ) then
+!!$      call wrf_error_fatal("Field ALBSI not found in input.  Field ALBSI is required if SEAICE_ALBEDO_OPT=2")
+!!$  endif
+!!$
+!!$  if ( ( seaice_thickness_opt == 1 ) .and. ( ifndicedepth == 0 ) ) then
+!!$      call wrf_error_fatal("Field ICEDEPTH not found in input.  Field ICEDEPTH is required if SEAICE_THICKNESS_OPT=1")
+!!$  endif
+!!$
+!!$  if ( ( seaice_snowdepth_opt == 1 ) .and. ( ifndsnowsi == 0 ) ) then
+!!$      call wrf_error_fatal("Field SNOWSI not found in input.  Field SNOWSI is required if SEAICE_SNOWDEPTH_OPT=1")
+!!$  endif
 
-  if ( ( seaice_thickness_opt == 1 ) .and. ( ifndicedepth == 0 ) ) then
-      call wrf_error_fatal("Field ICEDEPTH not found in input.  Field ICEDEPTH is required if SEAICE_THICKNESS_OPT=1")
-  endif
+  IF (sst_update .EQ. 1) THEN
+     DO ij = 1 , num_tiles
+        DO j=j_start(ij),j_end(ij)
+           DO i=i_start(ij),i_end(ij)
+              XICE_save(I,J) = XICEM(I,J)
+              XICEM(I,J) = XICE(I,J)
+           ENDDO
+        ENDDO
+     ENDDO
+  ENDIF
 
-  if ( ( seaice_snowdepth_opt == 1 ) .and. ( ifndsnowsi == 0 ) ) then
-      call wrf_error_fatal("Field SNOWSI not found in input.  Field SNOWSI is required if SEAICE_SNOWDEPTH_OPT=1")
-  endif
-
-  IF ( coupler_on .and. present(cplmask) .and. present(sst_input) ) THEN
+  IF ( coupler_on .AND. PRESENT(cplmask) .AND. PRESENT(sst_input) ) THEN
      
      CALL cpl_rcv( id, 'SST',            &
         &              ids, ide, jds, jde, kds, kde, &
@@ -1632,10 +1642,9 @@ CONTAINS
 #endif
 ! end check lake model    
 
-         ! is a sea-ice point
          IF ( XICE(I,J) .GE. XICE_THRESHOLD ) THEN
-            ! water point turns to sea-ice point
-            XLAND(I,J) = 1.
+            ! water point is a sea-ice point
+            XLAND(I,J) = 1.   ! land
             IVGTYP(I,J) = ISICE
             ISLTYP(I,J) = 16
             VEGFRA(I,J) = 0.
@@ -1668,7 +1677,7 @@ CONTAINS
         
          IF ( XLAND(i,j) .LT. 1.5 .AND. XICEM(I,J) .GE. XICE_THRESHOLD .AND. XICE(I,J) .LT. XICE_THRESHOLD ) THEN
             ! sea-ice point turns to water point
-            XLAND(I,J) = 2.
+            XLAND(I,J) = 2.   ! water
             IVGTYP(I,J) = ISWATER
             ISLTYP(I,J) = 14
             VEGFRA(I,J) = 0.
@@ -1687,8 +1696,6 @@ CONTAINS
                SH2O(I,NK,J) = 1.0
             ENDDO
          ENDIF
-         XICE_save(I,J) = XICEM(I,J)
-         XICEM(I,J) = XICE(I,J)
  
          IF (lakemodel.NE.1) THEN
             IF(XLAND(i,j) .GT. 1.5) THEN
@@ -1823,7 +1830,7 @@ CONTAINS
       decided     = .TRUE.
    END IF
 
-  IF ( run_param ) then
+  IF ( run_param ) THEN
 
   radiation = .false.
   frpcpn = .false.
@@ -2314,12 +2321,20 @@ CONTAINS
                u10,v10,th2,t2,q2,SNOWH,                            &
                gz1oz0,wspd,br,isfflx,dx,                           &
                svp1,svp2,svp3,svpt0,ep_1,ep_2,karman,              &
+<<<<<<< HEAD
                itimestep,ch,th_phy,pi_phy,qc_curr,rho,qcg,         &
                spp_pbl,pattern_spp_pbl,                            &
                XICE,SST,TSK_SEA,                                   &
+=======
+               &itimestep,ch,th_phy,pi_phy,qc_curr,rho,            &
+               &tsq,qsq,cov,Sh3d,el_pbl,qcg,                       &
+               &icloud_bl,qc_bl,cldfra_bl,                         &
+               &spp_pbl,pattern_spp_pbl,                           &
+               XICE,XICEM,SST,TSK_SEA,                                   &
+>>>>>>> 4a67e6713dded52145c067b943a9d5d2d8bdbd5c
                CHS2_SEA,CHS_SEA,CPM_SEA,CQS2_SEA,FLHC_SEA,FLQC_SEA,&
                HFX_SEA,LH_SEA,QFX_SEA,QGH_SEA,QSFC_SEA,ZNT_SEA,    &
-               HFX_ICE,QFX_ICE,TSK_ICE,    &
+               HFX_ICE,QFX_ICE,TSK_ICE,ZNT_ICE,                    &
                TICE2TSK_IF2COLD,XICE_THRESHOLD,                    &
                ids,ide, jds,jde, kds,kde,                          &
                ims,ime, jms,jme, kms,kme,                          &
@@ -2901,12 +2916,13 @@ CONTAINS
             IF ( isisfc ) THEN
                DO j=j_start(ij),j_end(ij)
                   DO i=i_start(ij),i_end(ij)
-                     IF ( ( XICE(I,J) .GE. XICE_THRESHOLD) .AND. ( XICE(i,j) .LE. 1.0 ) ) THEN
+                     IF ( ( XICE(I,J) .GE. XICE_THRESHOLD) .AND. ( XICE(i,j) .LE. 1.0 ) ) THEN   ! seaice point
                         ! save variables for coupling
                         hfx_ice(i,j) = hfx(i,j)
                         qfx_ice(i,j) = qfx(i,j)
                         lh_ice( i,j) = MAX(0., lh(i,j))
                         tsk_ice(i,j) = tsk(i,j)
+                        znt_ice(i,j) = znt(i,j)
                         !  Weighted average of fields between ice-cover values and open-water values.
                         flhc(i,j) = ( flhc(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * flhc_sea(i,j) )
                         flqc(i,j) = ( flqc(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * flqc_sea(i,j) )
@@ -2921,7 +2937,9 @@ CONTAINS
                         qfx(i,j)  = ( qfx(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * qfx_sea(i,j)  )
                         lh(i,j)   = ( lh(i,j)   * XICE(i,j) ) + ( (1.0-XICE(i,j)) * lh_sea(i,j)   )
                         tsk(i,j)  = ( tsk(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * sst(i,j)  )
+                        znt(i,j)  = ( znt(i,j)  * XICE(i,j) ) + ( (1.0-XICE(i,j)) * znt_sea(i,j)  )
                      ELSE
+                        ! variable used in module_cpl. Need to define "ice" values even if there is no ice...
                         hfx_ice(i,j) = 0.
                         qfx_ice(i,j) = 0.
                         lh_ice( i,j) = 0.
@@ -4191,7 +4209,7 @@ CONTAINS
        ENDIF
      ENDIF
 
-   ENDIF
+  ENDIF
 
    END SUBROUTINE surface_driver
 
@@ -4942,10 +4960,10 @@ CONTAINS
                &tsq,qsq,cov,Sh3d,el_pbl,qcg,                       &
                &icloud_bl,qc_bl,cldfra_bl,                         &
                &spp_pbl,pattern_spp_pbl,                           &
-XICE,SST,TSK_SEA,                                                  &
+XICE,XICEM,SST,TSK_SEA,                                            &
 CHS2_SEA,CHS_SEA,CPM_SEA,CQS2_SEA,FLHC_SEA,FLQC_SEA,               &
 HFX_SEA,LH_SEA,QFX_SEA,QGH_SEA,QSFC_SEA,ZNT_SEA,                   &
-HFX_ICE,QFX_ICE,TSK_ICE,                   &
+HFX_ICE,QFX_ICE,TSK_ICE,ZNT_ICE,                                   &
 TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
@@ -5002,6 +5020,7 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                                                    rho,th3d,pi3d
 
      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
+<<<<<<< HEAD
                INTENT(IN   )               ::             MAVAIL, &
                                                             PBLH, &
 <<<<<<< HEAD
@@ -5013,6 +5032,10 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                                                            SNOWH, &
                                                              TSK
 >>>>>>> master
+=======
+               INTENT(IN   )               ::               PBLH, &
+                                                           XLAND
+>>>>>>> 4a67e6713dded52145c067b943a9d5d2d8bdbd5c
 
      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                INTENT(OUT  )               ::                U10, &
@@ -5029,12 +5052,14 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                INTENT(INOUT)         ::    HFX, HFX_SEA, HFX_ICE, &
                                            QFX, QFX_SEA, QFX_ICE, &
                                            UST, UST_SEA, UST_ICE, &
-                                                   QSFC, ZNT, MOL,TSK
+                                           ZNT, ZNT_SEA, ZNT_ICE, &
+                                           MAVAIL, QSFC, MOL    , &
+                                           TSK, TSK_ICE, QSFC_SEA
 
      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                INTENT(OUT)   ::                           REGIME, &
                                                   GZ1OZ0,WSPD,BR, &
-                                                   RMOL,PSIM,PSIH
+                                                  RMOL,PSIM,PSIH
 
      REAL,     DIMENSION( ims:ime, kms:kme, jms:jme )           , &
                INTENT(IN   )   ::                            U3D, &
@@ -5098,16 +5123,19 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
      LOGICAL,  INTENT(IN)               ::      TICE2TSK_IF2COLD
      REAL,     INTENT(IN)               ::      XICE_THRESHOLD
      REAL,     DIMENSION( ims:ime, jms:jme ),                     &
-               INTENT(IN)               ::      XICE
+               INTENT(IN)               ::      XICE, XICEM
      REAL,     DIMENSION( ims:ime, jms:jme ),                     &
                INTENT(INOUT)            ::      SST
 <<<<<<< HEAD
      REAL,     DIMENSION( ims:ime, jms:jme ),                     &
+<<<<<<< HEAD
                INTENT(INOUT)            ::      QSFC_SEA
      REAL,     DIMENSION( ims:ime, jms:jme ),                     &
 =======
      REAL,     DIMENSION( ims:ime, jms:jme ), OPTIONAL,           &
 >>>>>>> master
+=======
+>>>>>>> 4a67e6713dded52145c067b943a9d5d2d8bdbd5c
                INTENT(OUT)              ::      TSK_SEA,          &
                                                 CHS2_SEA,         &
                                                 CHS_SEA,          &
@@ -5116,8 +5144,7 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                                                 FLHC_SEA,         &
                                                 FLQC_SEA,         &
                                                 LH_SEA,           &
-                                                QGH_SEA,          &
-                                                ZNT_SEA
+                                                QGH_SEA
 
 !--------------------------------------------------------------------
 !    Local
@@ -5148,53 +5175,83 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                                                 CH_SEA,           & ! new
                                                 ZOL_SEA
 ! INTENT(IN) to SFCLAY; unchanged by the call
-      ! ISFFLX
-      ! SVP1,SVP2,SVP3,SVPT0
-      ! EP1,EP2,KARMAN,EOMEG,STBOLT
-      ! CP,G,ROVCP,R,XLV,DX
-      ! dz8w
-      ! QV3D
-      ! P3D
-      ! T3D
-      ! MAVAIL
-      ! PBLH
-      ! XLAND
-      ! TSK
-      ! U3D
-      ! V3D
-      ! PSFC
-
-     ! Set up for open-water call
+     ! ISFFLX
+     ! SVP1,SVP2,SVP3,SVPT0
+     ! EP1,EP2,KARMAN,EOMEG,STBOLT
+     ! CP,G,ROVCP,R,XLV,DX
+     ! dz8w, dz2w1d
+     ! QV3D
+     ! P3D
+     ! T3D
+     ! U3D
+     ! V3D
+     ! MAVAIL : MAVAIL (registry r)  | MAVAIL_SEA (=1) wrapper local |                      |  sfc moisture availability
+     ! PBLH   :   PBLH (registry r)                                                         |  pbl height
+     ! XLAND  :  XLAND (registry r)  |  XLAND_SEA (=2) wrapper local |      
+     ! TSK    :    TSK (registry r)  |    TSK_SEA (registry r)       | TSK_ICE (registry r)
+     ! PSFC   :   PSFC (registry r)                                                         |  sfc pressure
+     ! QCG    :    QCG (registry r)                                                         |  sfc cld water mixing ratio
+     ! SNOWH  :  SNOWH (registry r)                                                         |  physical snow depth (see above)
+! INTENT(INOUT) to SFCLAY; changed by the call
+     ! HFX    :    HFX (registry r)  |    HFX_SEA (registry r)       | HFX_ICE (registry r)
+     ! QFX    :    QFX (registry r)  |    QFX_SEA (registry r)       | QFX_ICE (registry r) 
+     ! MOL    :    MOL (registry r)  |    MOL_SEA (wrapper local)    |                      | T* in similarity theory
+     ! QSFC   :   QSFC (registry r)  |   QSFC_SEA (sfc drv local)    |                      | sfc specific humidity (in: land only)
+     ! ZNT    :    ZNT (registry r)  |    ZNT_SEA (registry r)       | ZNT_ICE (registry r) | roughness length
+     ! UST    :    UST (registry r)  |    UST_SEA (registry r)       | UST_ICE (registry r) 
+     !
+     ! Set up input array for open-water call
      DO j = JTS , JTE
         DO i = ITS , ITE
-           IF ( ( XICE(I,J) .GE. XICE_THRESHOLD ) .AND. ( XICE(i,j) .LE. 1.0 ) ) THEN
-              XLAND_SEA(i,j)=2.
-              MAVAIL_SEA(I,J)  =1.
-              ZNT_SEA(I,J) = 0.0001
+           IF ( ( XICE(I,J) .GE. XICE_THRESHOLD ) .OR. ( XICEM(i,j) .GE. XICE_THRESHOLD ) ) THEN ! is or was (last time step) seaice
+              XLAND_SEA(i,j) = 2.   ! force to be water
+              MAVAIL_SEA(I,J) = 1.
               IF ( SST(i,j) .LT. 271.4 ) SST(i,j) = 271.4
               TSK_SEA(i,j) = SST(i,j)
-           ELSE
-              XLAND_SEA(i,j) = xland(i,j)
+           ELSE ! land or "true" open ocean, keep same values as arrays without _SEA 
+              XLAND_SEA(i,j) = XLAND(i,j)
               MAVAIL_SEA(i,j) = MAVAIL(i,j)
-              ZNT_SEA(i,j) = ZNT(i,j)
-              TSK_SEA(i,j) = TSK_ice(i,j)
-              QSFC_SEA(i,j) = QSFC(i,j)              
-              UST_SEA(i,j) = UST_ice(i,j)              
+              TSK_SEA(i,j) = TSK(i,j)   ! was updated to SST if oce (XLAND(i,j) > 1.5 AND.LAKEMASK(I,J).NE.1 )
            ENDIF
-           MOL_SEA(i,j)  = MOL(i,j)
+           QSFC_SEA(i,j) =  QSFC(i,j) ! use as input only over land    
+           MOL_SEA(i,j)  =   MOL(i,j)
         ENDDO
      ENDDO
 
-     hfx(its:ite, jts:jte) = hfx_ice(its:ite, jts:jte)
-     qfx(its:ite, jts:jte) = qfx_ice(its:ite, jts:jte)
-     tsk(its:ite, jts:jte) = tsk_ice(its:ite, jts:jte)
+     ! Set up input array for sea-ice call and "true" free ocean
+     DO j = JTS , JTE
+        DO i = ITS , ITE
+           IF     ( ( XICE(I,J) >= XICE_THRESHOLD ) .AND. ( XICEM(i,j) >= XICE_THRESHOLD ) ) THEN ! was and is still sea-ice
+              ! use *_ice variables declared in registy
+              TSK(i,j) = TSK_ICE(i,j) 
+              HFX(i,j) = HFX_ICE(i,j)
+              QFX(i,j) = QFX_ICE(i,j)
+              UST(i,j) = UST_ICE(i,j)
+              ZNT(I,J) = ZNT_ICE(i,j)
+           ELSEIF ( ( XICE(I,J) <  XICE_THRESHOLD ) .AND. ( XICEM(i,j) >= XICE_THRESHOLD ) ) THEN ! was but is no more sea-ice
+              MAVAIL(I,J) = 1.
+              HFX(i,j) = HFX_SEA(i,j)
+              QFX(i,j) = QFX_SEA(i,j)
+              UST(i,j) = UST_SEA(i,j)
+              ZNT(I,J) = ZNT_SEA(i,j)
+           ELSEIF ( ( XICE(I,J) >= XICE_THRESHOLD ) .AND. ( XICEM(i,j) <  XICE_THRESHOLD ) ) THEN ! new sea-ice
+              MAVAIL(I,J) = 0. ! ? cf QFX = 0 ? 
+              ! keep TSK(i,j) = SST(i,j) as a first guess as it should be close to the freezing point
+              HFX(i,j) = 0
+              QFX(i,j) = 0
+              ! kepp UST(i,j) = UST_SEA(i,j) as a first guess ??
+              ! kepp ZNT(I,J) = ZNT_SEA(i,j) as a first guess ??
+           ! ELSE ! land or true open oce: no need to do anything
+           ENDIF
+        ENDDO
+     ENDDO
 
      ! land/frozen-water call
 
           CALL SFCLAY_mynn(U3D,V3D,T3D,QV3D,P3D,dz8w,              &
                CP,G,ROVCP,R,XLV,PSFC,CHS,CHS2,CQS2,CPM,            &
-               ZNT,UST_ICE,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH,       &
-               XLAND,HFX,QFX,LH,TSK,FLHC,FLQC,QGH,QSFC,RMOL, &
+               ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH,   &
+               XLAND,HFX,QFX,LH,TSK,FLHC,FLQC,QGH,QSFC,RMOL,       &
                U10,V10,TH2,T2,Q2,SNOWH,                            &
                GZ1OZ0,WSPD,BR,ISFFLX,DX,                           &
                SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,                &
@@ -5206,7 +5263,6 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
                ims,ime, jms,jme, kms,kme,                          &
                its,ite, jts,jte, kts,kte,                          &
                ustm_ice,ck,cka,cd,cda,isftcflx,iz0tlnd,bl_mynn_cloudpdf)
-
 
      ! open-water call
 
@@ -5379,6 +5435,7 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
               gz1oz0(i,j) = gz1oz0(i,j) * XICE(i,j) + (1.0-XICE(i,j)) * gz1oz0_sea(i,j)
               ! HFX  -- wait
               ! LH   -- wait
+<<<<<<< HEAD
               mol(i,j)    = mol(i,j)    * XICE(i,j) + (1.0-XICE(i,j)) * mol_sea(i,j)
               psih(i,j)   = psih(i,j)   * XICE(i,j) + (1.0-XICE(i,j)) * psih_sea(i,j)
               psim(i,j)   = psim(i,j)   * XICE(i,j) + (1.0-XICE(i,j)) * psim_sea(i,j)
@@ -5397,6 +5454,19 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
               zol(i,j)    = zol(i,j)    * XICE(i,j) + (1.0-XICE(i,j)) * zol_sea(i,j)
               ch(i,j)     = ch(i,j)     * XICE(i,j) + (1.0-XICE(i,j)) * ch_sea(i,j)
 >>>>>>> master
+=======
+              mol(i,j)    = (    mol(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * mol_sea(i,j)    )
+              psih(i,j)   = (   psih(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * psih_sea(i,j)   )
+              psim(i,j)   = (   psim(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * psim_sea(i,j)   )
+              ! QFX  -- wait
+              ! QGH  -- wait
+              rmol(i,j)   = (   rmol(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * rmol_sea(i,j)   )
+              ust_ice(i,j)= ust(i,j)
+              ust(i,j)    = (    ust(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * ust_sea(i,j)    )
+              wspd(i,j)   = (   wspd(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * wspd_sea(i,j)   )
+              zol(i,j)    = (    zol(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * zol_sea(i,j)    )
+              ch(i,j)     = (     ch(i,j) * XICE(i,j) ) + ( (1.0-XICE(i,j)) * ch_sea(i,j)    )
+>>>>>>> 4a67e6713dded52145c067b943a9d5d2d8bdbd5c
               ! INTENT(OUT)
               ! --------------------------------------------------------------------
               IF ( PRESENT ( CD ) ) THEN
@@ -5422,9 +5492,8 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
               ENDIF
               v10(i,j)    = ( v10(i,j)    * XICE(i,j) ) + ( (1.0-XICE(i,j)) * v10_sea(i,j)    )
            ELSE
-              ust(i,j) = ust_ice(i,j)
               ustm(i,j) = ustm_ice(i,j)
-              ust_ice(i,j) = 0.
+              ust_ice(i,j) = 0.    ! variable used in module_cpl. Need to define "ice" values even if there is no ice...
               ustm_ice(i,j) = 0.
               IF( XLAND_SEA(i,j) .GT. 1.5 ) THEN
                  ust_sea(i,j) = ust_sea(i,j)

@@ -552,7 +552,8 @@ BENCH_START(surf_driver_tim)
      &        ,V_PHY=grid%v_phy        ,WARM_RAIN=grid%warm_rain                    &
      &        ,WSPD=grid%wspd          ,XICE=grid%xice     ,XLAND=grid%xland        &
      &        ,MAX_EDOM=grid%num_ext_model_couple_dom      ,CPLMASK=grid%cplmask    &
-     &        ,Z0=grid%z0              ,Z=grid%z        ,ZNT=grid%znt               &
+     &        ,Z0=grid%z0              ,Z=grid%z                                    &
+     &        ,ZNT=grid%znt            ,ZNT_SEA=grid%znt_sea,ZNT_ICE=grid%znt_ice   &
      &        ,ZS=grid%zs              ,ALBSI=grid%albsi , ICEDEPTH=grid%icedepth   &
      &        ,SNOWSI=grid%snowsi                                                   &
      &        ,XICEM=grid%xicem       ,ISICE=grid%landuse_isice, USTM=grid%ustm     &
@@ -943,7 +944,7 @@ BENCH_START(pbl_driver_tim)
      &        ,DZ8W=dz8w          ,HPBL_HOLD=hpbl_hold                              &
      &        ,EXCH_H=grid%exch_h     ,EXCH_M=grid%exch_m                           &
      &        ,FM=grid%fm         ,FHH=grid%fh                                      &
-     &        ,F=grid%f  ,GRDFLX=grid%grdflx      &
+     &        ,F=grid%f                                                             &
      &        ,GZ1OZ0=gz1oz0      ,HFX=grid%hfx            ,HT=grid%ht              &
      &        ,ID=grid%id         ,ITIMESTEP=grid%itimestep     ,KPBL=grid%kpbl          &
      &        ,LH=grid%lh              ,LOWLYR=grid%lowlyr      ,P8W=grid%p_hyd_w   &

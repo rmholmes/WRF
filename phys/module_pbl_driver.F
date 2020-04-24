@@ -16,7 +16,7 @@ CONTAINS
                  ,mznt                                             &
 #endif
                  ,ht                                               &   
-                 ,ust,pblh,hfx,qfx,grdflx,hpbl_hold                &
+                 ,ust,pblh,hfx,qfx,hpbl_hold                &
                  ,u_phy,v_phy,w,th_phy,rho                         &
                  ,p_phy,pi_phy,p8w,t_phy,dz8w,z                    &
                  ,exch_h,exch_m,akhs,akms                          &
@@ -530,7 +530,6 @@ CONTAINS
                                                              UZ0, &
                                                              VZ0, &
                                                               CT, &
-                                                          GRDFLX, &
                                                              U10, &
                                                              V10, &
                                                             UOCE, &
