@@ -706,11 +706,12 @@ CONTAINS
    END SUBROUTINE cpl_rcv_vector
 
 
-   SUBROUTINE cpl_rcv_sfcdrv( kdomwrf, max_edom, CPLMASK, COSA, SINA,  &
-      &                       SST_INPUT, SST, UOCE, VOCE,              &
-      &                       CHA_COEF,                                &
-      &                       ids, ide, jds, jde, kds, kde,            &
-      &                       ims, ime, jms, jme, kms, kme,            &
+   SUBROUTINE cpl_rcv_sfcdrv( kdomwrf, max_edom, CPLMASK, CPLMASK_WAVE, & 
+                              COSA, SINA,                               &
+      &                       SST_INPUT, SST, UOCE, VOCE,               &
+      &                       CHA_COEF,                                 &
+      &                       ids, ide, jds, jde, kds, kde,             &
+      &                       ims, ime, jms, jme, kms, kme,             &
       &                       ips, ipe, jps, jpe, kps, kpe )
       !!-------------------------------------------------------------------
       !!             ***  SUBROUTINE cpl_rcv_sfcdrv  ***
@@ -719,6 +720,7 @@ CONTAINS
       !!
       !-- MAX_EDOM      number of external model domains
       !-- CPLMASK       coupling mask (0 for data read in wrflowinput, 1 data received from the coupler)
+      !-- CPLMASK_WAVE  coupling mask for wave (0 for data read in wrflowinput, 1 data received from the coupler)
       !-- SST           sea-surface temperature (K)
       !-- SST_INPUT     sea-surface temperature read in wrflowinput (K) (= SST if no coupling)
       !-- UOCE          sea surface zonal currents (m s-1)
@@ -731,6 +733,7 @@ CONTAINS
       INTEGER,                                         INTENT(IN   ) ::   ims,ime,jms,jme,kms,kme
       INTEGER,                                         INTENT(IN   ) ::   ips,ipe,jps,jpe,kps,kpe
       REAL, DIMENSION( ims:ime, 1:max_edom, jms:jme ), INTENT(IN   ) ::   CPLMASK
+      REAL, DIMENSION( ims:ime, 1:max_edom, jms:jme ), INTENT(IN   ) ::   CPLMASK_WAVE
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(IN   ) ::   COSA, SINA
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(IN   ) ::   SST_INPUT
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(  OUT) ::   SST
@@ -755,7 +758,7 @@ CONTAINS
          &              ids, ide, jds, jde, kds, kde, &
          &              ims, ime, jms, jme, kms, kme, &
          &              ips, ipe, jps, jpe, kps, kpe, &
-         &              max_edom, CPLMASK, CHA_COEF, pdataobs=CHA_COEF)
+         &              max_edom, CPLMASK_WAVE, CHA_COEF, pdataobs=CHA_COEF)
 ! LR, CHA_COEF IN WRFLOWINPUT when no data from WW3
 !         &              max_edom, CPLMASK, CHA_COEF, cst=0.0185 )
       

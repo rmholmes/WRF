@@ -463,6 +463,7 @@ CONTAINS
 !-- XLAND         land mask (1 for land, 2 for water)
 !-- MAX_EDOM      number of external model domains
 !-- CPLMASK       coupling mask (0 for data read in wrflowinput, 1 data received from the coupler)
+!-- CPLMASK_WAVE  coupling mask for wave (0 for data read in wrflowinput, 1 data received from the coupler)
 !-- ZNT           thermal time-varying roughness length (m)
 !-- MZNT          momentum time-varying roughness length (m)
 !-- Z0            background roughness length (m)
@@ -688,6 +689,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   XLAND
    INTEGER,                                          INTENT(IN   ) ::   MAX_EDOM
    REAL, DIMENSION( ims:ime , 1:max_edom, jms:jme ), INTENT(IN   ), OPTIONAL ::   CPLMASK
+   REAL, DIMENSION( ims:ime , 1:max_edom, jms:jme ), INTENT(IN   ), OPTIONAL ::   CPLMASK_WAVE
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(IN   )::   COSA, SINA
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   XICEM
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   MAVAIL
