@@ -93,7 +93,7 @@ ESMF_TARGET         = esmf_time
 NETCDF4_IO_OPTS = -DUSE_NETCDF4_FEATURES -DWRFIO_NCD_LARGE_FILE_SUPPORT
 GPFS            =
 CURL            =
-HDF5            = -lhdf5_hl -lhdf5
+HDF5            = -L$(HDF5_ROOT)/lib -lhdf5 -lhdf5_hl
 ZLIB            = -lz
 DEP_LIB_PATH    = -L/apps/netcdf/4.7.1/lib/Intel
 NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
@@ -109,7 +109,7 @@ XIOS_ROOT_DIR   = /g/data/e14/rmh561/XIOS
 LIBWRFLIB = libwrflib.a
 
 # Add OASIS info:
-#OA3MCT_ROOT_DIR = /g/data/e14/rmh561/oasis3-mct/build
+OA3MCT_ROOT_DIR = /g/data/e14/rmh561/oasis3-mct/build
 
 #### Architecture specific settings ####
 
@@ -123,8 +123,8 @@ OMPCC           =       # -qopenmp -fpp -auto
 SFC             =       ifort
 SCC             =       icc
 CCOMP           =       icc
-DM_FC           =       mpif90 # -f90=$(SFC)
-DM_CC           =       mpicc # -cc=$(SCC)
+DM_FC           =       mpif90 -f90=$(SFC)
+DM_CC           =       mpicc -cc=$(SCC)
 FC              =       $(DM_FC)
 CC              =       $(DM_CC) -DFSEEKO64_OK 
 LD              =       $(FC)
@@ -187,9 +187,7 @@ ARCHFLAGS       =    $(COREDEFS) -DIWORDSIZE=$(IWORDSIZE) -DDWORDSIZE=$(DWORDSIZ
                       -DINTIO \
                       -DKEEP_INT_AROUND \
                       -DLIMIT_ARGS \
-                      -DBUILD_RRTMG_FAST=0 \
-                      -DBUILD_RRTMK=0 \
-                      -DBUILD_SBM_FAST=1 \
+                      -DBUILD_RRTMG_FAST=1 \
                       -DSHOW_ALL_VARS_USED=0 \
                       -DCONFIG_BUF_LEN=$(CONFIG_BUF_LEN) \
                       -DMAX_DOMAINS_F=$(MAX_DOMAINS) \
@@ -214,7 +212,8 @@ INCLUDE_MODULES =    $(MODULE_SRCH_FLAG) \
                       -I$(WRF_SRC_ROOT_DIR)/phys \
                       -I$(WRF_SRC_ROOT_DIR)/wrftladj \
                       -I$(WRF_SRC_ROOT_DIR)/chem -I$(WRF_SRC_ROOT_DIR)/inc \
-                      -I$(NETCDFPATH)/include/Intel
+                      -I$(NETCDFPATH)/include/Intel \
+                      -I$(NETCDFPATH)/include
 #                      -I$(XIOS_ROOT_DIR)/inc \
 #                      -I$(OA3MCT_ROOT_DIR)/build/lib/mct \
 #                      -I$(OA3MCT_ROOT_DIR)/build/lib/psmile.MPI1 \
@@ -234,10 +233,10 @@ CC_TOOLS_CFLAGS = -DNMM_CORE=$(WRF_NMM_CORE)
 
  LIB_EXTERNAL    = \
                       -L$(WRF_SRC_ROOT_DIR)/external/io_netcdf -lwrfio_nf \
-                      -L/apps/netcdf/4.7.1/lib/Intel -lnetcdff -lnetcdf
+                      -L/apps/netcdf/4.7.1/lib/Intel -lnetcdff -L/apps/netcdf/4.7.1/ -lnetcdf
 #                      -L$(XIOS_ROOT_DIR)/lib -lxios \
 #                      -L$(OA3MCT_ROOT_DIR)/lib -lpsmile.MPI1 -lmct -lmpeu -lscrip \
-
+LIB_LOCAL       =    -lstdc++
 LIB             =    $(LIB_BUNDLED) $(LIB_EXTERNAL) $(LIB_LOCAL) $(LIB_WRF_HYDRO) $(NETCDF4_DEP_LIB)
 LDFLAGS         =    $(OMP) $(FCFLAGS) $(LDFLAGS_LOCAL) 
 ENVCOMPDEFS     =    
