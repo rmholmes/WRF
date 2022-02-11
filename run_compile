@@ -125,7 +125,7 @@ if [[ 0 == 1 ]]; then
 fi
 
 # Source environment
-source ../build.env
+source setup_gadi_env.sh
 
 #netcdf4?
 if [[ $netcdf4 == 1 ]]; then
