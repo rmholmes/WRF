@@ -95,9 +95,9 @@ GPFS            =
 CURL            =
 HDF5            = -L$(HDF5_ROOT)/lib -lhdf5 -lhdf5_hl
 ZLIB            = -lz
-NETCDFPATH      = /apps/netcdf/4.7.1
-PNETCDFPATH      = /apps/netcdf/4.7.1p
-DEP_LIB_PATH    = -L$(NETCDFPATH)/lib
+NETCDFPATH      = /apps/netcdf/4.8.0
+PNETCDFPATH      = /apps/netcdf/4.8.0p
+DEP_LIB_PATH    = -L$(NETCDFPATH)/lib -L$(NETCDFPATH)/lib/Intel
 NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
 
 # NETCDF4INCLUDEGOESHERE
@@ -236,7 +236,7 @@ CC_TOOLS_CFLAGS = -DNMM_CORE=$(WRF_NMM_CORE)
                       -L$(WRF_SRC_ROOT_DIR)/external/io_netcdf -lwrfio_nf \
                       -L$(XIOS_ROOT_DIR)/lib -lxios \
                       -L$(OA3MCT_ROOT_DIR)/lib -lpsmile.MPI1 -lmct -lmpeu -lscrip \
-                      -L$(NETCDFPATH)/lib -lnetcdff -lnetcdf
+                      -L$(NETCDFPATH)/lib/Intel -lnetcdff -L$(NETCDFPATH)/lib -lnetcdf
 LIB_LOCAL       =    -lstdc++
 LIB             =    $(LIB_BUNDLED) $(LIB_EXTERNAL) $(LIB_LOCAL) $(LIB_WRF_HYDRO) $(NETCDF4_DEP_LIB)
 LDFLAGS         =    $(OMP) $(FCFLAGS) $(LDFLAGS_LOCAL) 
