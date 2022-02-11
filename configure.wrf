@@ -95,7 +95,8 @@ GPFS            =
 CURL            =
 HDF5            = -L$(HDF5_ROOT)/lib -lhdf5 -lhdf5_hl
 ZLIB            = -lz
-NETCDFPATH      = /apps/netcdf/4.8.0p
+NETCDFPATH      = /apps/netcdf/4.8.0
+PNETCDFPATH      = /apps/netcdf/4.8.0p
 DEP_LIB_PATH    = -L$(NETCDFPATH)/lib
 NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
 
@@ -245,7 +246,6 @@ CPPFLAGS        =    $(ARCHFLAGS) $(ENVCOMPDEFS) -I$(LIBINCLUDE) $(TRADFLAG)
 HDF5PATH        =    
 WRFPLUSPATH     =    
 RTTOVPATH       =    
-PNETCDFPATH     =    
 
 bundled:  io_only 
 external: io_only $(WRF_SRC_ROOT_DIR)/external/RSL_LITE/librsl_lite.a gen_comms_rsllite module_dm_rsllite $(ESMF_TARGET)
