@@ -97,7 +97,7 @@ HDF5            = -L$(HDF5_ROOT)/lib -lhdf5 -lhdf5_hl
 ZLIB            = -lz
 NETCDFPATH      = /apps/netcdf/4.8.0
 PNETCDFPATH      = /apps/netcdf/4.8.0p
-DEP_LIB_PATH    = -L$(NETCDFPATH)/lib -L$(NETCDFPATH)/lib/Intel
+DEP_LIB_PATH    = 
 NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
 
 # NETCDF4INCLUDEGOESHERE
