@@ -188,7 +188,7 @@ qsub $test -N compile_job <<EOF_compile
 compile_case=${compile_case}
 
 # get the environment
-source ../build.env
+source setup_gadi_env.sh
 
 # For multi-processors compilation
 export J="-j \$PBS_NCPUS"
