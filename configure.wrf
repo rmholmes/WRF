@@ -104,14 +104,14 @@ NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
 
 #### XIOS pieces
 
-XIOS_ROOT_DIR   = /g/data/e14/rmh561/XIOS-2.5
+XIOS_ROOT_DIR   = /g/data/e14/rmh561/croco/src/XIOS
 
 ##############################################################################
 
 LIBWRFLIB = libwrflib.a
 
 # Add OASIS info:
-OA3MCT_ROOT_DIR = /g/data/e14/rmh561/oasis3-mct-3.0/build
+OA3MCT_ROOT_DIR = /g/data/e14/rmh561/croco/src/oasis3-mct/build
 
 #### Architecture specific settings ####
 
