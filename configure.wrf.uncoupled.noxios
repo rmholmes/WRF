@@ -95,21 +95,23 @@ GPFS            =
 CURL            =
 HDF5            = -L$(HDF5_ROOT)/lib -lhdf5 -lhdf5_hl
 ZLIB            = -lz
-DEP_LIB_PATH    = -L/apps/netcdf/4.7.1/lib/Intel
+NETCDFPATH      = /apps/netcdf/4.8.0
+PNETCDFPATH      = /apps/netcdf/4.8.0p
+DEP_LIB_PATH    = 
 NETCDF4_DEP_LIB = $(DEP_LIB_PATH) $(HDF5) $(ZLIB) $(GPFS) $(CURL)
 
 # NETCDF4INCLUDEGOESHERE
 
 #### XIOS pieces
 
-XIOS_ROOT_DIR   = /g/data/e14/rmh561/XIOS
+XIOS_ROOT_DIR   = /g/data/e14/rmh561/croco/src/XIOS
 
 ##############################################################################
 
 LIBWRFLIB = libwrflib.a
 
 # Add OASIS info:
-OA3MCT_ROOT_DIR = /g/data/e14/rmh561/oasis3-mct/build
+OA3MCT_ROOT_DIR = /g/data/e14/rmh561/croco/src/oasis3-mct/build
 
 #### Architecture specific settings ####
 
@@ -130,7 +132,7 @@ CC              =       $(DM_CC) -DFSEEKO64_OK
 LD              =       $(FC)
 RWORDSIZE       =       $(NATIVE_RWORDSIZE)
 PROMOTION       =       -real-size `expr 8 \* $(RWORDSIZE)` -i4
-ARCH_LOCAL      =       -DNONSTANDARD_SYSTEM_FUNC -DOPTIMIZE_CFL_TEST $(NETCDF4_IO_OPTS)
+ARCH_LOCAL      =       -DNONSTANDARD_SYSTEM_FUNC -DOPTIMIZE_CFL_TEST -DUSE_MYDROP $(NETCDF4_IO_OPTS)
 # CMS/Gadi version: ARCH_LOCAL      =       -DNONSTANDARD_SYSTEM_FUNC -DWRF_USE_CLM $(NETCDF4_IO_OPTS) -DRPC_TYPES=2 -Dkey_cpp_oasis3
 # Lionel's version: ARCH_LOCAL      =       -DNONSTANDARD_SYSTEM_FUNC -DCHUNK=64 -DXEON_OPTIMIZED_WSM5 -DOPTIMIZE_CFL_TEST  -Dkey_cpp_xios -Dkey_cpp_oasis3 -DUSE_MYDROP $(NETCDF4_IO_OPTS)
 CFLAGS_LOCAL    =       -w -O2 -ip -xHost -fp-model fast=2 -no-prec-div -no-prec-sqrt -ftz -no-multibyte-chars
@@ -146,7 +148,7 @@ FORMAT_FREE     =       -FR
 FCSUFFIX        =
 BYTESWAPIO      =       -convert big_endian
 RECORDLENGTH    =       -assume byterecl
-FCBASEOPTS_NO_G =       -ip -fp-model precise -w -ftz -align all -fno-alias $(FORMAT_FREE) $(BYTESWAPIO) -xHost -fp-model fast=2 -no-heap-arrays -no-prec-div -no-prec-sqrt -fno-common -xCORE-AVX512
+FCBASEOPTS_NO_G =       -ip -fp-model precise -w -ftz -align all -fno-alias $(FORMAT_FREE) $(BYTESWAPIO) -xHost -fp-model fast=2 -no-heap-arrays -no-prec-div -no-prec-sqrt -fno-common
 FCBASEOPTS      =       $(FCBASEOPTS_NO_G) $(FCDEBUG)
 MODULE_SRCH_FLAG =     
 TRADFLAG        =      -traditional-cpp $(NETCDF4_IO_OPTS)
@@ -201,7 +203,6 @@ ESMF_LIB_FLAGS  =
 # ESMF 5 -- these are defined in esmf.mk, included above
  ESMF_IO_LIB     =    -L$(WRF_SRC_ROOT_DIR)/external/esmf_time_f90 -lesmf_time
 ESMF_IO_LIB_EXT =    -L$(WRF_SRC_ROOT_DIR)/external/esmf_time_f90 -lesmf_time
-NETCDFPATH      =    /apps/netcdf/4.7.1
 INCLUDE_MODULES =    $(MODULE_SRCH_FLAG) \
                      $(ESMF_MOD_INC) $(ESMF_LIB_FLAGS) \
                       -I$(WRF_SRC_ROOT_DIR)/main \
@@ -215,8 +216,8 @@ INCLUDE_MODULES =    $(MODULE_SRCH_FLAG) \
                       -I$(NETCDFPATH)/include/Intel \
                       -I$(NETCDFPATH)/include
 #                      -I$(XIOS_ROOT_DIR)/inc \
-#                      -I$(OA3MCT_ROOT_DIR)/build/lib/mct \
-#                      -I$(OA3MCT_ROOT_DIR)/build/lib/psmile.MPI1 \
+                      # -I$(OA3MCT_ROOT_DIR)/build/lib/mct \
+                      # -I$(OA3MCT_ROOT_DIR)/build/lib/psmile.MPI1 \
 
 REGISTRY        =    Registry
 CC_TOOLS_CFLAGS = -DNMM_CORE=$(WRF_NMM_CORE)
@@ -233,9 +234,9 @@ CC_TOOLS_CFLAGS = -DNMM_CORE=$(WRF_NMM_CORE)
 
  LIB_EXTERNAL    = \
                       -L$(WRF_SRC_ROOT_DIR)/external/io_netcdf -lwrfio_nf \
-                      -L/apps/netcdf/4.7.1/lib/Intel -lnetcdff -L/apps/netcdf/4.7.1/ -lnetcdf
-#                      -L$(XIOS_ROOT_DIR)/lib -lxios \
-#                      -L$(OA3MCT_ROOT_DIR)/lib -lpsmile.MPI1 -lmct -lmpeu -lscrip \
+                      -L$(NETCDFPATH)/lib/Intel -lnetcdff -L$(NETCDFPATH)/lib -lnetcdf
+                      # -L$(XIOS_ROOT_DIR)/lib -lxios \
+                      # -L$(OA3MCT_ROOT_DIR)/lib -lpsmile.MPI1 -lmct -lmpeu -lscrip \
 LIB_LOCAL       =    -lstdc++
 LIB             =    $(LIB_BUNDLED) $(LIB_EXTERNAL) $(LIB_LOCAL) $(LIB_WRF_HYDRO) $(NETCDF4_DEP_LIB)
 LDFLAGS         =    $(OMP) $(FCFLAGS) $(LDFLAGS_LOCAL) 
@@ -245,7 +246,6 @@ CPPFLAGS        =    $(ARCHFLAGS) $(ENVCOMPDEFS) -I$(LIBINCLUDE) $(TRADFLAG)
 HDF5PATH        =    
 WRFPLUSPATH     =    
 RTTOVPATH       =    
-PNETCDFPATH     =    
 
 bundled:  io_only 
 external: io_only $(WRF_SRC_ROOT_DIR)/external/RSL_LITE/librsl_lite.a gen_comms_rsllite module_dm_rsllite $(ESMF_TARGET)
