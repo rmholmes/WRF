@@ -218,6 +218,22 @@ CONTAINS
          END IF
          WRITE(cltxt,*) '   maxval(grid%cplmask(ips:ipe,jext,jps:jpe)): ', zmax            ;   CALL wrf_debug(nlevdbg, cltxt)
 
+         zmin = MINVAL(grid%cplmasku(ips:ipe,jext,jps:jpe))
+         IF( zmin < 0. ) THEN
+            WRITE(cltxt,*) 'min of external model domain cplmasku: ',jext,' < 0. : ',zmin   ;   CALL cpl_abort('cpl_defdomain',cltxt)
+         END IF
+         WRITE(cltxt,*) '   minval(grid%cplmasku(ips:ipe,jext,jps:jpe)): ', zmin            ;   CALL wrf_debug(nlevdbg, cltxt)
+
+         zmax = MAXVAL(grid%cplmasku(ips:ipe,jext,jps:jpe))
+         IF( zmax > 1. ) THEN
+            WRITE(cltxt,*) 'max of external model domain cplmasku: ',jext,' > 1. : ',zmax   ;   CALL cpl_abort('cpl_defdomain',cltxt)
+         END IF
+         IF( zmax == 0. ) THEN
+            WRITE(cltxt,*) 'max of external model domain cplmasku: ',jext,' = 0 '           ;   CALL wrf_message(cltxt)
+            WRITE(cltxt,*) '  => no coupling between this external model domain and this WRF patch'   ;   CALL wrf_message(cltxt)
+         END IF
+         WRITE(cltxt,*) '   maxval(grid%cplmasku(ips:ipe,jext,jps:jpe)): ', zmax            ;   CALL wrf_debug(nlevdbg, cltxt)
+
       END DO
 #endif       
       
@@ -718,7 +734,8 @@ CONTAINS
    END SUBROUTINE cpl_rcv_vector
 
 
-   SUBROUTINE cpl_rcv_sfcdrv( kdomwrf, max_edom, CPLMASK, COSA, SINA,  &
+   SUBROUTINE cpl_rcv_sfcdrv( kdomwrf, max_edom, COSA, SINA,           &
+      &                       CPLMASK, CPLMASKU,                       &
       &                       SST_INPUT, SST, UOCE, VOCE,              &
       &                       CHA_COEF,                                &
       &                       ids, ide, jds, jde, kds, kde,            &
@@ -731,6 +748,7 @@ CONTAINS
       !!
       !-- MAX_EDOM      number of external model domains
       !-- CPLMASK       coupling mask (0 for data read in wrflowinput, 1 data received from the coupler)
+      !-- CPLMASKU      coupling mask used on ocean velocity (0 for data read in wrflowinput, 1 data received from the coupler)
       !-- SST           sea-surface temperature (K)
       !-- SST_INPUT     sea-surface temperature read in wrflowinput (K) (= SST if no coupling)
       !-- UOCE          sea surface zonal currents (m s-1)
@@ -743,6 +761,7 @@ CONTAINS
       INTEGER,                                         INTENT(IN   ) ::   ims,ime,jms,jme,kms,kme
       INTEGER,                                         INTENT(IN   ) ::   ips,ipe,jps,jpe,kps,kpe
       REAL, DIMENSION( ims:ime, 1:max_edom, jms:jme ), INTENT(IN   ) ::   CPLMASK
+      REAL, DIMENSION( ims:ime, 1:max_edom, jms:jme ), INTENT(IN   ) ::   CPLMASKU
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(IN   ) ::   COSA, SINA
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(IN   ) ::   SST_INPUT
       REAL, DIMENSION( ims:ime,             jms:jme ), INTENT(  OUT) ::   SST
@@ -761,7 +780,7 @@ CONTAINS
          &              ids, ide, jds, jde, kds, kde,                 &
          &              ims, ime, jms, jme, kms, kme,                 &
          &              ips, ipe, jps, jpe, kps, kpe,                 &
-         &              max_edom, CPLMASK, COSA, SINA, UOCE, VOCE )
+         &              max_edom, CPLMASKU, COSA, SINA, UOCE, VOCE )
 
       CALL cpl_rcv( kdomwrf, 'CHA_COEF',              &
          &              ids, ide, jds, jde, kds, kde, &

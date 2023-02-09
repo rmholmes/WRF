@@ -41,7 +41,7 @@ CONTAINS
      &          ,t_phy,u10,udrunoff,ust,uz0                           &
      &          ,u_frame,u_phy,v10,vegfra,u10e,v10e,uoce,voce         &
      &          ,vz0,v_frame,v_phy,warm_rain,wspd,xice,xland,z,znt    &
-     &          ,max_edom,cplmask,cosa,sina,cha_coef                  &
+     &          ,max_edom,cplmask,cplmasku,cosa,sina,cha_coef         &
 #if (HWRF==1)
      &          ,mznt                                                 &
 #endif
@@ -463,6 +463,7 @@ CONTAINS
 !-- XLAND         land mask (1 for land, 2 for water)
 !-- MAX_EDOM      number of external model domains
 !-- CPLMASK       coupling mask (0 for data read in wrflowinput, 1 data received from the coupler)
+!-- CPLMASKU       coupling mask for ocean velocity (0 for data read in wrflowinput, 1 data received from the coupler)
 !-- ZNT           thermal time-varying roughness length (m)
 !-- MZNT          momentum time-varying roughness length (m)
 !-- Z0            background roughness length (m)
@@ -688,6 +689,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   XLAND
    INTEGER,                                          INTENT(IN   ) ::   MAX_EDOM
    REAL, DIMENSION( ims:ime , 1:max_edom, jms:jme ), INTENT(IN   ), OPTIONAL ::   CPLMASK
+   REAL, DIMENSION( ims:ime , 1:max_edom, jms:jme ), INTENT(IN   ), OPTIONAL ::   CPLMASKU
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(IN   )::   COSA, SINA
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   XICEM
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   MAVAIL
@@ -1456,8 +1458,9 @@ CONTAINS
       call wrf_error_fatal("Field SNOWSI not found in input.  Field SNOWSI is required if SEAICE_SNOWDEPTH_OPT=1")
   endif
 
-  IF ( coupler_on .and. present(cplmask) .and. present(sst_input) ) THEN
-     CALL cpl_rcv_sfcdrv( id, max_edom, cplmask, cosa, sina,    &
+  IF ( coupler_on .and. present(cplmask) .and. present(cplmask) .and. present(sst_input) ) THEN
+     CALL cpl_rcv_sfcdrv( id, max_edom, cosa, sina,    &
+        &              cplmask,cplmasku,   &
         &              SST_INPUT, SST, UOCE, VOCE,   &
         &              CHA_COEF,   &
         &              ids, ide, jds, jde, kds, kde, &
